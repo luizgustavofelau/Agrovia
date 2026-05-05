@@ -1,0 +1,21 @@
+{
+  "dependencies": {
+    "@react-spring/parallax": "^10.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "mysql2": "^3.18.2"
+  },
+  "name": "agrovia-backend",
+  "version": "1.0.0",
+  "description": "Backend API do AgroVia",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test-db": "node test-db.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
+}

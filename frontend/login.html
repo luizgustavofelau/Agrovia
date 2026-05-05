@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgroVia - Login</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        /* Estilos específicos para centralizar o login */
+        .login-container {
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #f4f7f4;
+        }
+        .login-card {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            border-top: 8px solid #1a3d1e;
+        }
+        .login-card input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card">
+            <img src="img/logo.png" alt="AgroVia" style="height: 60px; margin-bottom: 20px;">
+            <h2>Acesso ao Sistema</h2>
+            <p>Monitore sua plantação</p>
+            
+            <form id="loginForm">
+                <input type="email" id="email" placeholder="Seu e-mail" required>
+                <input type="password" id="senha" placeholder="Sua senha" required>
+                <button type="submit" class="btn-primary" style="width: 100%; margin-top: 20px;">Entrar</button>
+            </form>
+            <p id="msgErro" style="color: red; margin-top: 15px; display: none;">Usuário ou senha incorretos.</p>
+        </div>
+    </div>
+    <script src="js/login.js"></script>
+</body>
+</html>
