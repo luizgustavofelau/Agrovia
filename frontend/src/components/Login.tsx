@@ -12,14 +12,12 @@ const Login: React.FC = () => {
     e.preventDefault();
     setErro('');
     setCarregando(true);
-
     try {
       const response = await fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim(), senha: senha.trim() }),
       });
-
       if (response.ok) {
         const data = await response.json();
         localStorage.setItem('usuarioNome', data.usuario.nome);
@@ -36,67 +34,103 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-green-100">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-10 border-t-8 border-green-800">
-        {/* Logo / título */}
-        <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 rounded-full bg-green-800 flex items-center justify-center mb-4 shadow-lg">
-            <span className="text-white text-2xl font-bold">AV</span>
-          </div>
-          <h1 className="text-2xl font-bold text-green-900">AgroVia</h1>
-          <p className="text-sm text-green-700 mt-1">Acesso ao Sistema</p>
-          <p className="text-xs text-gray-400 mt-1">Monitore sua plantação</p>
-        </div>
+    <div
+      className="min-h-screen flex items-center justify-center px-4"
+      style={{ background: "linear-gradient(135deg, #022c22 0%, #064e3b 45%, #065f46 100%)" }}
+    >
+      {/* Subtle grid texture overlay */}
+      <div
+        className="fixed inset-0 pointer-events-none opacity-[0.03]"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(0deg,transparent,transparent 40px,#fff 40px,#fff 41px), repeating-linear-gradient(90deg,transparent,transparent 40px,#fff 40px,#fff 41px)",
+        }}
+      />
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-              E-mail
-            </label>
-            <input
-              id="email"
-              type="email"
-              required
-              placeholder="seu@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent transition"
-            />
-          </div>
+      <div className="relative w-full max-w-md">
+        {/* Glow behind card */}
+        <div className="absolute -inset-1 bg-brand-600/20 blur-2xl rounded-3xl" />
 
-          <div>
-            <label htmlFor="senha" className="block text-sm font-medium text-gray-700 mb-1">
-              Senha
-            </label>
-            <input
-              id="senha"
-              type="password"
-              required
-              placeholder="••••••••"
-              value={senha}
-              onChange={(e) => setSenha(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent transition"
-            />
-          </div>
+        {/* Glass card */}
+        <div className="relative glass-card-dark rounded-3xl px-10 py-12">
 
-          {erro && (
-            <p className="text-red-500 text-sm bg-red-50 border border-red-200 rounded-lg px-4 py-2">
-              {erro}
+          {/* Logo mark */}
+          <div className="flex flex-col items-center mb-10">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-brand flex items-center justify-center shadow-lg mb-5">
+              <span className="text-white font-display font-extrabold text-xl tracking-tight">AV</span>
+            </div>
+            <h1 className="font-display text-2xl font-extrabold text-surface-100 tracking-tight">
+              AgroVia
+            </h1>
+            <p className="mt-1.5 text-surface-400 text-sm font-light">
+              Sistema de Irrigação Inteligente
             </p>
-          )}
+          </div>
 
-          <button
-            type="submit"
-            disabled={carregando}
-            className="w-full bg-green-800 hover:bg-green-700 disabled:bg-green-400 text-white font-bold py-3 rounded-lg shadow-md transition duration-300 transform hover:scale-[1.02] active:scale-100"
-          >
-            {carregando ? 'Entrando...' : 'Entrar'}
-          </button>
-        </form>
+          {/* Divider */}
+          <div className="h-px bg-white/10 mb-8" />
 
-        <p className="text-center text-xs text-gray-400 mt-8">
-          © 2026 AgroVia — Automação Agrícola
-        </p>
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label htmlFor="email" className="block text-xs font-semibold uppercase tracking-widest text-surface-400 mb-2">
+                E-mail
+              </label>
+              <input
+                id="email"
+                type="email"
+                required
+                placeholder="seu@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-surface-100 placeholder-surface-600 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500/50 transition duration-150 text-sm"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="senha" className="block text-xs font-semibold uppercase tracking-widest text-surface-400 mb-2">
+                Senha
+              </label>
+              <input
+                id="senha"
+                type="password"
+                required
+                placeholder="••••••••"
+                value={senha}
+                onChange={(e) => setSenha(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-surface-100 placeholder-surface-600 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500/50 transition duration-150 text-sm"
+              />
+            </div>
+
+            {erro && (
+              <div className="flex items-start gap-2.5 bg-rose-500/10 border border-rose-500/20 text-rose-300 rounded-xl px-4 py-3 text-sm">
+                <span className="mt-0.5">⚠️</span>
+                <span>{erro}</span>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={carregando}
+              className="w-full bg-brand-700 hover:bg-brand-600 disabled:bg-brand-900 disabled:opacity-50 text-white font-semibold tracking-wide py-3 rounded-xl shadow-lg transition duration-200 hover:scale-[1.02] active:scale-100 mt-2 text-sm"
+            >
+              {carregando ? (
+                <span className="flex items-center justify-center gap-2">
+                  <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                  </svg>
+                  Entrando...
+                </span>
+              ) : (
+                'Entrar na Plataforma'
+              )}
+            </button>
+          </form>
+
+          <p className="text-center text-surface-600 text-xs mt-8">
+            © 2026 AgroVia — Todos os direitos reservados
+          </p>
+        </div>
       </div>
     </div>
   );

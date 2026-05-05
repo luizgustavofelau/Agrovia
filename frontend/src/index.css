@@ -1,3 +1,74 @@
+/* Google Fonts — Inter (body) + Montserrat (display/headings) */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Montserrat:wght@600;700;800;900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ── Base reset ──────────────────────────────────────────────────────────── */
+@layer base {
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply bg-surface-100 text-surface-900 font-sans antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display font-bold tracking-tight;
+  }
+}
+
+/* ── Glassmorphism utilities ─────────────────────────────────────────────── */
+@layer components {
+  /* Card glass claro (para fundos claros/brancos) */
+  .glass-card {
+    @apply bg-white/10 backdrop-blur-md border border-white/20 shadow-glass rounded-2xl;
+  }
+
+  /* Card glass escuro (para fundos escuros/brandos) */
+  .glass-card-dark {
+    @apply bg-white/5 backdrop-blur-lg border border-white/10 shadow-glass-dark rounded-2xl;
+  }
+
+  /* Superfície de painel (para containers internos do dashboard) */
+  .panel-surface {
+    @apply bg-white/80 backdrop-blur-sm border border-surface-200 shadow-glass-sm rounded-2xl;
+  }
+
+  /* Navbar glassmorphism */
+  .glass-nav {
+    @apply bg-brand-900/90 backdrop-blur-lg border-b border-white/10 shadow-glass-dark;
+  }
+
+  /* Botão primário brand */
+  .btn-brand {
+    @apply bg-brand-700 hover:bg-brand-600 active:bg-brand-800
+           text-white font-semibold tracking-wide
+           px-6 py-2.5 rounded-xl shadow-md
+           transition duration-200 ease-out
+           hover:scale-[1.03] active:scale-100;
+  }
+
+  /* Botão secundário (outline) */
+  .btn-outline {
+    @apply border border-brand-700 text-brand-700 hover:bg-brand-50
+           font-semibold tracking-wide px-6 py-2.5 rounded-xl
+           transition duration-200 ease-out;
+  }
+
+  /* Input moderno */
+  .input-field {
+    @apply w-full px-4 py-3 rounded-xl
+           bg-surface-50 border border-surface-200
+           text-surface-900 placeholder-surface-400
+           focus:outline-none focus:ring-2 focus:ring-brand-600/40 focus:border-brand-600
+           transition duration-150;
+  }
+
+  /* Badge de status */
+  .badge-optimal { @apply text-brand-700  bg-brand-50  ring-1 ring-brand-200  text-xs font-semibold px-2.5 py-0.5 rounded-full; }
+  .badge-low     { @apply text-amber-700  bg-amber-50  ring-1 ring-amber-200  text-xs font-semibold px-2.5 py-0.5 rounded-full; }
+  .badge-high    { @apply text-rose-700   bg-rose-50   ring-1 ring-rose-200   text-xs font-semibold px-2.5 py-0.5 rounded-full; }
+}
