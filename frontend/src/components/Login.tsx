@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import '../styles/login.css';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
@@ -34,114 +35,82 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-end pr-16 md:pr-24"
+    <div 
+      className="login-page"
       style={{
-        backgroundImage:
-          'url(https://storage.googleapis.com/tagjs-prod.appspot.com/v1/WwTQVoKzHF/sfr7kh1l_expires_30_days.png)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'left top',
-        backgroundRepeat: 'no-repeat',
+        backgroundImage: `linear-gradient(to bottom, rgba(14, 26, 15, 0.6) 0%, var(--dark) 100%), url('/img/fundo-login.jpg')`
       }}
     >
-      {/* Dark overlay for readability on left side */}
-      <div className="absolute inset-0 bg-black/20 pointer-events-none" />
+      <div className="login-overlay" />
+      
+      <div className="login-card">
+        <header className="login-header">
+          <div className="login-logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
+            <img src="/img/logo-agrovia.png" alt="Agrovia Logo" />
+            AGRO<span>VIA</span>
+          </div>
+          <h1 className="login-title">Seja bem-vindo</h1>
+          <p className="login-subtitle">Entre com suas credenciais para acessar o painel</p>
+        </header>
 
-      {/* Login Card */}
-      <div className="relative z-10 flex flex-col items-start bg-[#34A853] py-[2.7rem] px-9 rounded-[20px] w-full max-w-[403px] shadow-2xl">
-
-        {/* Logo */}
-        <div className="flex items-center gap-3 mb-6 self-center">
-          <img
-            src="https://storage.googleapis.com/tagjs-prod.appspot.com/v1/WwTQVoKzHF/0axiwvd3_expires_30_days.png"
-            alt="AgroVia Logo"
-            className="w-16 h-[53px] object-fill"
-          />
-        </div>
-
-        {/* Welcome text */}
-        <span className="text-white text-3xl font-bold mb-2 self-center">
-          Seja Bem-vindo
-        </span>
-        <span className="text-white text-xl font-bold mb-8 self-center opacity-90">
-          Entrar no Agrovia
-        </span>
-
-        <form onSubmit={handleSubmit} className="w-full flex flex-col gap-4">
-          {/* Email input */}
-          <div className="flex flex-col gap-1">
-            <label className="text-white text-sm font-semibold opacity-80 pl-1">
-              E-mail
-            </label>
+        <form onSubmit={handleSubmit} className="login-form">
+          <div className="form-group">
+            <label htmlFor="email">E-mail</label>
             <input
               id="email"
               type="email"
               required
-              placeholder="Digite seu email"
+              placeholder="seu@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="text-white bg-[#034510] text-base font-medium py-3 px-4 rounded-[20px] border-0 outline-none placeholder-white/50 focus:ring-2 focus:ring-white/30 transition"
             />
           </div>
 
-          {/* Password input */}
-          <div className="flex flex-col gap-1">
-            <label className="text-white text-sm font-semibold opacity-80 pl-1">
-              Senha
-            </label>
+          <div className="form-group">
+            <label htmlFor="senha">Senha</label>
             <input
               id="senha"
               type="password"
               required
-              placeholder="Digite sua senha"
+              placeholder="••••••••"
               value={senha}
               onChange={(e) => setSenha(e.target.value)}
-              className="text-white bg-[#034510] text-base font-medium py-3 px-4 rounded-[20px] border-0 outline-none placeholder-white/50 focus:ring-2 focus:ring-white/30 transition"
             />
           </div>
 
-          {/* Forgot password */}
-          <div className="flex justify-end">
-            <button
-              type="button"
-              className="text-white text-sm font-bold opacity-80 hover:opacity-100 transition bg-transparent border-0 cursor-pointer"
-            >
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <button type="button" className="forgot-password">
               Esqueceu a senha?
             </button>
           </div>
 
-          {/* Error message */}
           {erro && (
-            <div className="flex items-start gap-2 bg-red-500/20 border border-red-400/30 text-white rounded-xl px-4 py-3 text-sm">
+            <div className="login-error">
               <span>⚠️</span>
               <span>{erro}</span>
             </div>
           )}
 
-          {/* Login button */}
           <button
             id="btn-entrar"
             type="submit"
             disabled={carregando}
-            className="w-full bg-[#0059E0] hover:bg-[#0047b8] disabled:opacity-60 text-white text-base font-bold py-3 rounded-[30px] border-0 cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-100 shadow-lg mt-1"
+            className="login-btn"
           >
             {carregando ? (
-              <span className="flex items-center justify-center gap-2">
-                <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                </svg>
-                Entrando...
-              </span>
+              <>
+                <div className="spinner" />
+                <span>Entrando...</span>
+              </>
             ) : (
-              'Entrar'
+              'Entrar no Painel'
             )}
           </button>
         </form>
 
-        <p className="text-white/50 text-xs text-center w-full mt-8">
-          © 2026 AgroVia — Todos os direitos reservados
-        </p>
+        <footer className="login-footer">
+          © 2026 AgroVia — Tecnologia para o Campo
+        </footer>
       </div>
     </div>
   );
