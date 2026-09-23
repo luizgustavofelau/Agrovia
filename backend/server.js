@@ -1,4 +1,4 @@
-﻿
+
 require('dotenv').config();
 console.log('Variáveis carregadas:', process.env.DB_HOST, process.env.DB_USER, process.env.DB_PASS, process.env.DB_NAME, process.env.DB_PORT);
 
@@ -12,6 +12,7 @@ app.use(express.json());
 
 app.post('/api/login', async (req, res) => {
   const { email, senha } = req.body;
+  console.log(`[LOGIN] Tentativa de login para: ${email}`);
 
   if (!email || !senha) {
     return res.status(400).json({ sucesso: false, mensagem: 'E-mail e senha são obrigatórios.' });
@@ -44,7 +45,7 @@ app.post('/api/login', async (req, res) => {
     const dbPort = process.env.DB_PORT || 3306;
     console.error(`[LOGIN] Erro ao conectar ao banco em ${dbHost}:${dbPort}`);
     console.error('Detalhes do erro:', err);
-    if (err && err.code === 'ECONNREFUSED') {
+    if (err && (err.code === 'ECONNREFUSED' || err.code === 'ETIMEDOUT')) {
       return res.status(500).json({ sucesso: false, mensagem: `Não foi possível conectar ao banco de dados em ${dbHost}:${dbPort}. Verifique se o host e porta estão corretos e se o banco aceita conexões remotas.` });
     }
     return res.status(500).json({ sucesso: false, mensagem: 'Erro interno no servidor.' });

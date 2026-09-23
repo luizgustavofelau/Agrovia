@@ -21,11 +21,13 @@ const Login: React.FC = () => {
       });
       if (response.ok) {
         const data = await response.json();
+        console.log('[LOGIN] Sucesso:', data);
         localStorage.setItem('usuarioNome', data.usuario.nome);
         localStorage.setItem('usuarioLogado', JSON.stringify(data.usuario));
         navigate('/painel');
       } else {
-        setErro('E-mail ou senha incorretos. Tente novamente.');
+        const dataErro = await response.json().catch(() => ({}));
+        setErro(dataErro.mensagem || 'E-mail ou senha incorretos. Tente novamente.');
       }
     } catch {
       setErro('Servidor não está respondendo. Verifique se o Node.js está rodando.');
