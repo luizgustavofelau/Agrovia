@@ -86,3 +86,12 @@
   .badge-low     { @apply text-amber-700  bg-amber-50  ring-1 ring-amber-200  text-xs font-semibold px-2.5 py-0.5 rounded-full; }
   .badge-high    { @apply text-rose-700   bg-rose-50   ring-1 ring-rose-200   text-xs font-semibold px-2.5 py-0.5 rounded-full; }
 }
+
+.account-page section { background: #ffffff !important; border-color: #e7e5e4 !important; box-shadow: 0 8px 24px rgba(58, 39, 18, .06); }
+.account-page input, .account-page select { background: #fafaf9 !important; border-color: #e7e5e4 !important; color: #243126 !important; }
+.account-page input:focus, .account-page select:focus { border-color: #3a7d44 !important; }
+.account-page section h2 { color: #243126; }
+.account-page section .text-slate-100, .account-page section .text-slate-50 { color: #243126; }
+.account-page section .text-slate-400 { color: #687263; }
+.account-page section .bg-slate-900\/50 { background: #ffffff; }
+.account-page section .border-white\/10 { border-color: #e7e5e4; }
