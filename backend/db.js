@@ -1,4 +1,4 @@
-﻿require('dotenv').config();
+require('dotenv').config();
 const mysql = require('mysql2/promise');
 
 
@@ -14,7 +14,8 @@ const dbConfig = {
   queueLimit: 0,
 };
 
-console.log('[DB] Tentando conectar ao banco com as configurações:', dbConfig);
+const { password, ...safeDbConfig } = dbConfig;
+console.log('[DB] Tentando conectar ao banco com as configurações:', safeDbConfig);
 
 const pool = mysql.createPool(dbConfig);
 

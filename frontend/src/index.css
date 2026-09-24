@@ -5,6 +5,20 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─── Agrovia Shared Variables ─── */
+:root {
+  --green: #3a7d44;
+  --green-light: #5db870;
+  --green-neon: #7fff6a;
+  --soil: #6b4c2a;
+  --soil-light: #c89a6b;
+  --cream: #f4f0e6;
+  --dark: #0e1a0f;
+  --dark2: #1a2e1c;
+  --text: #e8f0e9;
+  --muted: #8aab8c;
+}
+
 /* ── Base reset ──────────────────────────────────────────────────────────── */
 @layer base {
   html {

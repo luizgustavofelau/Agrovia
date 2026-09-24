@@ -1,18 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap');
-
-/* ─── CSS Variables (Shared with Landing) ─── */
-:root {
-  --green: #3a7d44;
-  --green-light: #5db870;
-  --green-neon: #7fff6a;
-  --soil: #6b4c2a;
-  --soil-light: #c89a6b;
-  --cream: #f4f0e6;
-  --dark: #0e1a0f;
-  --dark2: #1a2e1c;
-  --text: #e8f0e9;
-  --muted: #8aab8c;
-}
+/* ─── Login Styles (Variables centralized in index.css) ─── */
 
 .login-page {
   font-family: 'DM Sans', sans-serif;
