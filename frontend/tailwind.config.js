@@ -11,6 +11,13 @@ module.exports = {
 
       // ── Paleta AgroVia ────────────────────────────────────────────────────
       colors: {
+        agrovia: {
+          cream: "#F4F0E6",
+          sidebar: "#0F1A10",
+          operational: "#3A7D44",
+          soil: "#C89A6B",
+          "soil-ink": "#3A2712",
+        },
         // Verde tecnológico escuro (base da identidade)
         brand: {
           50:  "#f0fdf6",

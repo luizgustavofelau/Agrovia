@@ -4,6 +4,7 @@ import ParallaxDrops from './components/ParallaxDrops';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 import PrivateRoute from './components/PrivateRoute';
+import Conta from './pages/Conta';
 
 function App() {
   return (
@@ -25,6 +26,15 @@ function App() {
           }
         />
 
+        <Route
+          path="/conta"
+          element={
+            <PrivateRoute>
+              <Conta />
+            </PrivateRoute>
+          }
+        />
+
         {/* Qualquer rota desconhecida redireciona para Home */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
@@ -32,4 +42,4 @@ function App() {
   );
 }
 
-export default App;
+export default App;
