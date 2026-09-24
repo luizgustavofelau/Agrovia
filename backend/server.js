@@ -1,10 +1,12 @@
 
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 console.log('Variáveis carregadas:', {
   DB_HOST: process.env.DB_HOST,
   DB_USER: process.env.DB_USER,
   DB_NAME: process.env.DB_NAME,
   DB_PORT: process.env.DB_PORT,
+  PORT: process.env.PORT,
 });
 
 const express = require('express');
@@ -57,6 +59,8 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-app.listen(5000, () => {
-  console.log('🚀 Servidor AgroVia rodando em http://localhost:5000');
+const port = Number(process.env.PORT) || 5000;
+
+app.listen(port, () => {
+  console.log(`🚀 Servidor AgroVia rodando em http://localhost:${port}`);
 });
