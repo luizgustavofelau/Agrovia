@@ -18,7 +18,7 @@ function App() {
 
         {/* Painel — acessível apenas após login */}
         <Route
-          path="/painel"
+          path="/painel/*"
           element={
             <PrivateRoute>
               <Dashboard />
