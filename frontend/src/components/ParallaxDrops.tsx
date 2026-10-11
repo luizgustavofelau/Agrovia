@@ -7,17 +7,33 @@ const ParallaxDrops: React.FC = () => {
   const [scrollY, setScrollY] = useState(0);
 
   useEffect(() => {
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (prefersReducedMotion) {
+      setScrollY(0);
+      return undefined;
+    }
+
+    let ticking = false;
+
     const handleScroll = () => {
-      setScrollY(window.scrollY);
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          setScrollY(window.scrollY);
+          ticking = false;
+        });
+        ticking = true;
+      }
     };
 
-    window.addEventListener("scroll", handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Parallax effect
-  const heroParallax = scrollY * 0.5;
-  const midParallax = (scrollY - 300) * 0.3;
+  const heroParallax = scrollY * 0.18;
+  const heroContentParallax = scrollY * 0.08;
+  const midParallax = (scrollY - 300) * 0.22;
+  const overlayParallax = scrollY * 0.28;
 
   return (
     <div className="landing-container">
@@ -54,8 +70,21 @@ const ParallaxDrops: React.FC = () => {
           backgroundPosition: `center ${heroParallax}px`,
         }}
       >
-        <div className="hero-bg" id="heroBg"></div>
-        <svg className="hero-drops" viewBox="0 0 1440 800" preserveAspectRatio="xMidYMid slice">
+        <div
+          className="hero-bg"
+          id="heroBg"
+          style={{ transform: `translate3d(0, ${heroParallax}px, 0) scale(1.12)` }}
+        ></div>
+        <div
+          className="hero-glow"
+          style={{ transform: `translate3d(0, ${overlayParallax}px, 0)` }}
+        ></div>
+        <svg
+          className="hero-drops"
+          viewBox="0 0 1440 800"
+          preserveAspectRatio="xMidYMid slice"
+          style={{ transform: `translate3d(0, ${heroParallax * 1.6}px, 0)` }}
+        >
           <defs>
             <linearGradient id="dropGrad" x1="0%" y1="0%" x2="0%" y2="100%">
               <stop offset="0%" stopColor="rgba(167,243,208,0)" />
@@ -74,7 +103,10 @@ const ParallaxDrops: React.FC = () => {
           <ellipse className="drop" cx="650" cy="10" rx="3" ry="7" style={{ animationDuration: "4.8s", animationDelay: "1s" }} />
           <ellipse className="drop" cx="1050" cy="55" rx="2" ry="5" style={{ animationDuration: "3.2s", animationDelay: "3s" }} />
         </svg>
-        <div className="hero-content">
+        <div
+          className="hero-content"
+          style={{ transform: `translate3d(0, ${heroContentParallax}px, 0)` }}
+        >
           <div className="hero-brand">
           </div>
           <p className="hero-eyebrow">Irrigação Inteligente · ESP32 · IoT · Agronegócio</p>
@@ -196,7 +228,11 @@ const ParallaxDrops: React.FC = () => {
           backgroundPosition: `center ${midParallax}px`,
         }}
       >
-        <div className="parallax-mid-bg" id="midBg"></div>
+        <div
+          className="parallax-mid-bg"
+          id="midBg"
+          style={{ transform: `translate3d(0, ${midParallax}px, 0) scale(1.12)` }}
+        ></div>
         <div className="parallax-mid-content">
           <div className="mid-brand">
             <img src="/img/logo-agrovia.png" alt="Agrovia Logo" className="mid-logo-img" />

@@ -1,0 +1,105 @@
+.dashboard-light .alert-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.dashboard-light .alert-history-note {
+  margin: -8px 0 0;
+  padding: 10px 12px;
+  border-left: 3px solid #86a578;
+  border-radius: 8px;
+  background: #eef4e7;
+  color: #385539;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.dashboard-light .alert-summary > div {
+  min-height: 76px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 18px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.dashboard-light .alert-summary span {
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+
+.dashboard-light .alert-summary strong {
+  color: var(--ink);
+  font: 500 24px 'Fraunces', serif;
+}
+
+.dashboard-light .alert-summary .critical {
+  border-left: 3px solid #b8503b;
+}
+
+.dashboard-light .alert-summary .critical strong {
+  color: #8a2d2d;
+}
+
+.dashboard-light .alert-summary .attention {
+  border-left: 3px solid #d6a43a;
+}
+
+.dashboard-light .alert-summary .attention strong {
+  color: #914d0a;
+}
+
+.dashboard-light .alert-card {
+  min-height: 138px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border-left: 3px solid #7d9a71;
+  border-radius: 12px;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.dashboard-light .alert-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 13px 26px rgba(46, 61, 38, 0.09);
+}
+
+.dashboard-light .alert-card.alta {
+  border-left-color: #b8503b;
+}
+
+.dashboard-light .alert-card.média {
+  border-left-color: #d6a43a;
+}
+
+.dashboard-light .alert-card.baixa {
+  border-left-color: #5b8b52;
+}
+
+.dashboard-light .recommendation-list {
+  gap: 8px;
+}
+
+.dashboard-light .recommendation-list li {
+  border-left: 3px solid #86a578;
+  background: #f8f9f4;
+  border-radius: 8px;
+}
+
+@media (max-width: 680px) {
+  .dashboard-light .alert-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-light .alert-summary > div {
+    min-height: 60px;
+  }
+
+  .dashboard-light .alert-card {
+    min-height: 120px;
+  }
+}

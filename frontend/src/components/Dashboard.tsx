@@ -1,20 +1,16 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import {
-  CloudRain,
-  Droplets,
-  LogOut,
-  Sprout,
-  Thermometer,
-  Wifi,
-  Zap
-} from "lucide-react";
+import { LogOut, Printer } from "lucide-react";
 import Sidebar from "./Sidebar";
 import "../styles/dashboard.css";
+import "../styles/dashboard-mobile.css";
+import "../styles/dashboard-alerts.css";
+import "../styles/dashboard-reports.css";
+import "../styles/dashboard-chart.css";
+import "../styles/dashboard-status.css";
+import "../styles/dashboard-reporting.css";
 import Sensores from "./Sensores";
 import Campos from "./Campos";
-
-type Crop = "Soja" | "Feijão";
 
 type SensorResumo = {
   id: string;
@@ -23,6 +19,79 @@ type SensorResumo = {
   temperature: number;
   reading: string;
 };
+
+type ChartMetric = "Umidade do solo" | "Temperatura" | "Precipitação";
+type ChartRange = "Dia" | "Semana" | "7 dias" | "Mês";
+
+const chartMetrics: Record<ChartMetric, {
+  unit: string;
+  min: number;
+  max: number;
+  ticks: number[];
+  idealRange?: [number, number];
+  series: { name: string; color: "water" | "leaf" | "soil"; values: number[] }[];
+}> = {
+  "Umidade do solo": {
+    unit: "%",
+    min: 0,
+    max: 100,
+    ticks: [90, 70, 50, 30, 10],
+    idealRange: [40, 65],
+    series: [
+      { name: "Talhão 1", color: "water", values: [42, 54, 48, 63, 58, 70, 64, 58] },
+      { name: "Talhão 2", color: "leaf", values: [51, 58, 53, 66, 60, 56, 51, 46] },
+      { name: "Talhão 3", color: "soil", values: [33, 29, 35, 24, 21, 28, 25, 27] },
+    ],
+  },
+  Temperatura: {
+    unit: "°C",
+    min: 10,
+    max: 40,
+    ticks: [40, 30, 20, 10],
+    idealRange: [20, 30],
+    series: [
+      { name: "Talhão 1", color: "water", values: [22, 23, 24, 26, 25, 27, 26, 24] },
+      { name: "Talhão 2", color: "leaf", values: [24, 25, 25, 27, 26, 24, 25, 25] },
+      { name: "Talhão 3", color: "soil", values: [26, 27, 29, 31, 30, 28, 26, 26] },
+    ],
+  },
+  Precipitação: {
+    unit: "mm",
+    min: 0,
+    max: 15,
+    ticks: [15, 12, 9, 6, 3, 0],
+    series: [
+      { name: "Talhão 1", color: "water", values: [0, 2, 1, 7, 3, 0, 5, 1] },
+      { name: "Talhão 2", color: "leaf", values: [1, 0, 3, 5, 2, 4, 0, 2] },
+      { name: "Talhão 3", color: "soil", values: [0, 4, 2, 1, 6, 3, 1, 0] },
+    ],
+  },
+};
+
+const chartLabels: Record<ChartRange, string[]> = {
+  Dia: ["00h", "03h", "06h", "09h", "12h", "15h", "18h", "21h"],
+  Semana: ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom", "Hoje"],
+  "7 dias": ["D-6", "D-5", "D-4", "D-3", "D-2", "Ontem", "Hoje", "Agora"],
+  Mês: ["1", "5", "10", "15", "20", "25", "30", "Hoje"],
+};
+
+const chartRangeTitles: Record<ChartRange, string> = {
+  Dia: "hoje",
+  Semana: "esta semana",
+  "7 dias": "últimos 7 dias",
+  Mês: "últimos 30 dias",
+};
+
+const demoRangeAdjustments: Record<ChartRange, number[]> = {
+  Dia: [0, 1, -1, 2, 0, -1, 1, 0],
+  Semana: [1, -2, 0, 1, -1, 2, 0, -1],
+  "7 dias": [-1, 0, 2, -2, 1, 0, -1, 1],
+  Mês: [2, 1, -2, 0, 2, -1, 0, -2],
+};
+
+function chartY(value: number, min: number, max: number) {
+  return 220 - ((value - min) / (max - min)) * 200;
+}
 
 const sensors: SensorResumo[] = [
   { id: "S-01", field: "Talhão 1", humidity: 58, temperature: 24, reading: "há 2 min" },
@@ -37,16 +106,12 @@ const getStatus = (humidity: number) => {
   return { label: "Ideal", className: "good" };
 };
 
-const chartPoints =
-  "0,124 38,116 76,130 114,100 152,108 190,92 228,104 266,82 304,96 342,75 380,86 418,68 456,78 494,58 532,70 570,52 608,62 646,45 684,54 722,42 760,50";
-
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const name = localStorage.getItem("usuarioNome") ?? "Usuário";
-  const [irrigationOn, setIrrigationOn] = useState(false);
-  const [crop, setCrop] = useState<Crop>("Soja");
   const [dateTime, setDateTime] = useState("");
+  const [greeting, setGreeting] = useState("Bom dia");
   const [humidity, setHumidity] = useState(52);
   const initials = name.slice(0, 2).toUpperCase();
   const activeNav = location.pathname.endsWith("/sensores")
@@ -59,12 +124,48 @@ const Dashboard: React.FC = () => {
           ? "Alertas"
           : "Painel";
   const averageHumidity = humidity;
-  const [activeTab, setActiveTab] = useState("Umidade do solo");
-  const [range, setRange] = useState("7 dias");
+  const [activeTab, setActiveTab] = useState<ChartMetric>("Umidade do solo");
+  const [range, setRange] = useState<ChartRange>("7 dias");
+  const [mostrarAvisoHistorico, setMostrarAvisoHistorico] = useState(false);
+  const metricChart = chartMetrics[activeTab];
+  const periodAdjustment = demoRangeAdjustments[range];
+  const chartSeries = metricChart.series.map((series) => {
+    const points = series.values.map((baseValue, index) => {
+      const value = Math.max(
+        metricChart.min,
+        Math.min(metricChart.max, baseValue + periodAdjustment[index]),
+      );
+      const x = 30 + index * (590 / (series.values.length - 1));
+      return { x, y: chartY(value, metricChart.min, metricChart.max) };
+    });
+    return {
+      ...series,
+      points,
+      pointString: points.map((point) => `${point.x},${point.y}`).join(" "),
+      lastPoint: points[points.length - 1],
+    };
+  });
+  const firstSeriesPoints = chartSeries[0]?.points ?? [];
+  const chartAreaPath = firstSeriesPoints.length
+    ? `M${firstSeriesPoints.map((point) => `${point.x},${point.y}`).join(" L")} L620,220 L30,220 Z`
+    : "";
+  const reportCards = [
+    { label: "Irrigação otimizada", value: "94%", accent: "good" },
+    { label: "Uso de água", value: "1.280 L", accent: "neutral" },
+    { label: "Eficiência energética", value: "87%", accent: "good" },
+    { label: "Produtividade prevista", value: "+12.4%", accent: "accent" },
+  ];
+  const alertCards = [
+    { title: "Talhão 3", message: "Umidade crítica em 27% — acionamento recomendado.", severity: "Alta" },
+    { title: "Talhão 5", message: "Temperatura acima do limite em 32°C.", severity: "Média" },
+    { title: "Bomba principal", message: "Status operacional estável com consumo normal.", severity: "Baixa" },
+  ];
 
   useEffect(() => {
     const updateClock = () => {
       const now = new Date();
+      const hour = now.getHours();
+      setGreeting(hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite");
       const date = now.toLocaleDateString("pt-BR", {
         weekday: "long",
         day: "numeric",
@@ -92,12 +193,6 @@ const Dashboard: React.FC = () => {
     return () => window.clearInterval(timer);
   }, []);
 
-  const gaugeStyle = useMemo(
-    () => ({
-      background: `conic-gradient(var(--leaf-deep) ${humidity * 3.6}deg, var(--bg-soft) 0deg)`
-    }),
-    [humidity]
-  );
   const logout = () => {
     localStorage.removeItem("usuarioNome");
     localStorage.removeItem("usuarioLogado");
@@ -111,45 +206,169 @@ const Dashboard: React.FC = () => {
       <main className="dashboard-main">
         <header className="dashboard-topbar">
           <div>
-            <h1>Bom dia, equipe Agrovia</h1>
+            <h1>{greeting}, {name}</h1>
             <p>
-              Fazenda Santa Rita · atualizado há 4 minutos{" "}
-              <span>{dateTime}</span>
+              Fazenda Santa Rita · {dateTime}
             </p>
           </div>
-          <button
-            type="button"
-            className="dashboard-user-chip"
-            onClick={logout}
-          >
+          <div className="dashboard-account-actions">
+            <div className="dashboard-user-chip">
             <span className="dashboard-avatar">{initials}</span>
             <span>{name}</span>
-          </button>
+            </div>
+            <button type="button" className="dashboard-logout-btn" onClick={logout}>
+              <LogOut size={15} aria-hidden="true" />
+              <span>Sair</span>
+            </button>
+          </div>
         </header>
+        {["Painel", "Relatórios", "Alertas"].includes(activeNav) && (
+          <div className="dashboard-demo-banner" role="status">
+            <strong>Modo demonstração</strong>
+            <span>Indicadores, alertas e previsões são ilustrativos e não representam leituras conectadas.</span>
+          </div>
+        )}
         {activeNav === "Sensores" ? (
           <Sensores />
         ) : activeNav === "Campos" ? (
           <Campos />
         ) : activeNav === "Relatórios" ? (
-          <section className="dashboard-panel">
-            <div className="dashboard-panel-head">
+          <section className="dashboard-reports-panel">
+            <div className="dashboard-panel-head reports-head reports-intro">
               <div>
-                <h2>Relatórios</h2>
-                <p className="dashboard-kpi-sub">
-                  Esta área está em desenvolvimento. Os relatórios serão exibidos aqui.
+                <p className="section-kicker">Visão de desempenho</p>
+                <h2>Relatórios de desempenho</h2>
+                <p className="report-lead">
+                  Compare consumo hídrico, eficiência da irrigação e produtividade prevista no período selecionado.
                 </p>
+                <p className="report-meta">Atualizado {dateTime} · Recorte demonstrativo</p>
+              </div>
+              <button
+                type="button"
+                className="dashboard-secondary-btn report-export-btn"
+                onClick={() => window.print()}
+              >
+                <Printer size={15} aria-hidden="true" />
+                Exportar PDF
+              </button>
+            </div>
+
+            <div className="report-context" aria-label="Contexto do relatório">
+              <div>
+                <span>Período analisado</span>
+                <strong>Últimos 7 dias</strong>
+              </div>
+              <div>
+                <span>Indicadores acompanhados</span>
+                <strong>{reportCards.length} dimensões de desempenho</strong>
+              </div>
+              <div>
+                <span>Escopo do relatório</span>
+                <strong>Água, energia e produtividade</strong>
+              </div>
+            </div>
+
+            <div className="report-grid">
+              {reportCards.map((item) => (
+                <article key={item.label} className="analysis-card">
+                  <span className="analysis-label">{item.label}</span>
+                  <strong className={`analysis-value ${item.accent}`}>{item.value}</strong>
+                </article>
+              ))}
+            </div>
+
+            <div className="report-analytics">
+              <div className="dashboard-panel compact-panel">
+                <div className="dashboard-panel-head mini-head">
+                  <h3>Consumo hídrico</h3>
+                  <span className="status-tag good">Saudável</span>
+                </div>
+                <div className="bars-stack" aria-label="Consumo hídrico semanal">
+                  {[42, 58, 47, 72, 66, 80, 74].map((value, index) => (
+                    <span key={index} style={{ height: `${value}%` }} />
+                  ))}
+                </div>
+              </div>
+
+              <div className="dashboard-panel compact-panel">
+                <div className="dashboard-panel-head mini-head">
+                  <h3>Resumo executivo</h3>
+                </div>
+                <ul className="summary-list">
+                  <li><span>Umidade média do solo</span><strong>52%</strong></li>
+                  <li><span>Área irrigada</span><strong>18 ha</strong></li>
+                  <li><span>Tempo médio de irrigação</span><strong>2h 15min</strong></li>
+                  <li><span>Desperdício estimado</span><strong>6%</strong></li>
+                </ul>
               </div>
             </div>
           </section>
         ) : activeNav === "Alertas" ? (
-          <section className="dashboard-panel">
-            <div className="dashboard-panel-head">
+          <section className="dashboard-reports-panel">
+            <div className="dashboard-panel-head reports-head alerts-intro">
               <div>
-                <h2>Alertas</h2>
-                <p className="dashboard-kpi-sub">
-                  Esta área está em desenvolvimento. Os alertas dos sensores serão exibidos aqui.
+                <p className="section-kicker">Atenção operacional</p>
+                <h2>Central de alertas</h2>
+                <p className="alerts-lead">
+                  Priorize ocorrências por gravidade e consulte as recomendações para cada área monitorada.
                 </p>
               </div>
+              <button
+                type="button"
+                className="dashboard-secondary-btn"
+                aria-expanded={mostrarAvisoHistorico}
+                onClick={() => setMostrarAvisoHistorico((visible) => !visible)}
+              >
+                Ver histórico
+              </button>
+            </div>
+
+            {mostrarAvisoHistorico && (
+              <p className="alert-history-note" role="status">
+                O histórico completo ficará disponível após a integração com o banco. Os eventos exibidos são demonstrativos.
+              </p>
+            )}
+
+            <div className="alert-summary" aria-label="Resumo das prioridades">
+              <div>
+                <span>Eventos ativos</span>
+                <strong>{alertCards.length}</strong>
+              </div>
+              <div className="critical">
+                <span>Prioridade alta</span>
+                <strong>{alertCards.filter((item) => item.severity === "Alta").length}</strong>
+              </div>
+              <div className="attention">
+                <span>Prioridade média</span>
+                <strong>{alertCards.filter((item) => item.severity === "Média").length}</strong>
+              </div>
+              <div className="low-priority">
+                <span>Prioridade baixa</span>
+                <strong>{alertCards.filter((item) => item.severity === "Baixa").length}</strong>
+              </div>
+            </div>
+
+            <div className="alert-grid">
+              {alertCards.map((item) => (
+                <article key={item.title} className={`alert-card ${item.severity.toLowerCase()}`}>
+                  <div className="alert-card-top">
+                    <h3>{item.title}</h3>
+                    <span className={`severity-pill ${item.severity.toLowerCase()}`}>{item.severity}</span>
+                  </div>
+                  <p>{item.message}</p>
+                </article>
+              ))}
+            </div>
+
+            <div className="dashboard-panel compact-panel full-width-panel">
+              <div className="dashboard-panel-head mini-head">
+                <h3>Recomendações automáticas</h3>
+              </div>
+              <ul className="recommendation-list">
+                <li>Reduzir irrigação no Talhão 4 em 12% para evitar excedente hídrico.</li>
+                <li>Priorizar inspeção na bomba principal até 18:30, devido a picos de consumo.</li>
+                <li>Programar monitoramento manual do Talhão 3 nas próximas 2 horas.</li>
+              </ul>
             </div>
           </section>
         ) : (
@@ -197,12 +416,13 @@ const Dashboard: React.FC = () => {
             <section className="dashboard-grid">
               <div className="dashboard-panel">
                 <div className="dashboard-tabs">
-                  {["Umidade do solo", "Temperatura", "Precipitação"].map(
+                  {(["Umidade do solo", "Temperatura", "Precipitação"] as ChartMetric[]).map(
                     (tab) => (
                       <button
                         type="button"
                         key={tab}
                         className={activeTab === tab ? "active" : ""}
+                        aria-pressed={activeTab === tab}
                         onClick={() => setActiveTab(tab)}
                       >
                         {tab}
@@ -213,7 +433,7 @@ const Dashboard: React.FC = () => {
                 <div className="dashboard-panel-head">
                   <div>
                     <h2>
-                      Tendência de {activeTab.toLowerCase()} — últimos 7 dias
+                      Tendência de {activeTab.toLowerCase()} — {chartRangeTitles[range]}
                     </h2>
                     <div className="chart-legend">
                       <span>
@@ -229,13 +449,15 @@ const Dashboard: React.FC = () => {
                         Talhão 3
                       </span>
                     </div>
+                    <p className="dashboard-chart-demo-note">Amostra demonstrativa · leituras ilustrativas</p>
                   </div>
                   <div className="range-select">
-                    {["Dia", "Semana", "7 dias", "Mês"].map((item) => (
+                    {(["Dia", "Semana", "7 dias", "Mês"] as ChartRange[]).map((item) => (
                       <button
                         type="button"
                         key={item}
                         className={range === item ? "active" : ""}
+                        aria-pressed={range === item}
                         onClick={() => setRange(item)}
                       >
                         {item}
@@ -247,101 +469,60 @@ const Dashboard: React.FC = () => {
                   className="moisture-chart"
                   viewBox="0 0 640 260"
                   role="img"
-                  aria-label="Tendência dos níveis dos talhões"
+                  aria-label={`Tendência de ${activeTab.toLowerCase()} em ${chartRangeTitles[range]}`}
                 >
                   <g stroke="#E2DCC7" strokeWidth="1">
                     <line x1="30" y1="20" x2="30" y2="220" />
                     <line x1="30" y1="220" x2="620" y2="220" />
+                  </g>
+                  <g stroke="#e9ece3" strokeWidth="1">
+                    {metricChart.ticks.map((tick) => {
+                      const y = chartY(tick, metricChart.min, metricChart.max);
+                      return <line key={tick} x1="30" y1={y} x2="620" y2={y} />;
+                    })}
                   </g>
                   <g
                     fill="#8B9482"
                     fontSize="11"
                     fontFamily="Plus Jakarta Sans"
                   >
-                    <text x="6" y="24">
-                      90
-                    </text>
-                    <text x="6" y="74">
-                      70
-                    </text>
-                    <text x="6" y="124">
-                      50
-                    </text>
-                    <text x="10" y="174">
-                      30
-                    </text>
-                    <text x="14" y="224">
-                      10
-                    </text>
+                    {metricChart.ticks.map((tick) => (
+                      <text key={tick} x="2" y={chartY(tick, metricChart.min, metricChart.max) + 4}>
+                        {tick}{metricChart.unit}
+                      </text>
+                    ))}
                   </g>
-                  <rect
-                    x="30"
-                    y="86"
-                    width="590"
-                    height="56"
-                    fill="#4C7A3B"
-                    opacity=".08"
-                  />
-                  <text
-                    x="622"
-                    y="118"
-                    fontSize="10"
-                    fill="#5E6A57"
-                    textAnchor="end"
-                  >
-                    faixa ideal
-                  </text>
-                  <path
-                    d="M30,150 L120,120 L210,132 L300,96 L390,110 L480,86 L570,100 L620,92 L620,220 L30,220 Z"
-                    fill="url(#fillWater)"
-                  />
-                  <polyline
-                    points="30,150 120,120 210,132 300,96 390,110 480,86 570,100 620,92"
-                    fill="none"
-                    stroke="#2F7B9C"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                  />
-                  <polyline
-                    points="30,110 120,100 210,118 300,104 390,122 480,108 570,96 620,112"
-                    fill="none"
-                    stroke="#4C7A3B"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                  />
-                  <polyline
-                    points="30,168 120,178 210,160 300,190 390,200 480,182 570,196 620,188"
-                    fill="none"
-                    stroke="#B97A3D"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                  />
-                  <circle
-                    cx="390"
-                    cy="200"
-                    r="4.5"
-                    fill="#B97A3D"
-                    stroke="#fff"
-                    strokeWidth="1.5"
-                  />
+                  {metricChart.idealRange && (
+                    <>
+                      <rect
+                        x="30"
+                        y={chartY(metricChart.idealRange[1], metricChart.min, metricChart.max)}
+                        width="590"
+                        height={chartY(metricChart.idealRange[0], metricChart.min, metricChart.max) - chartY(metricChart.idealRange[1], metricChart.min, metricChart.max)}
+                        fill="#4C7A3B"
+                        opacity=".08"
+                      />
+                      <text x="618" y={chartY(metricChart.idealRange[0], metricChart.min, metricChart.max) - 4} fontSize="10" fill="#5E6A57" textAnchor="end">
+                        faixa ideal
+                      </text>
+                    </>
+                  )}
+                  <path d={chartAreaPath} fill="url(#fillWater)" />
+                  {chartSeries.map((series) => (
+                    <g key={series.name}>
+                      <polyline className={`chart-series ${series.color}`} points={series.pointString} />
+                      <circle className={`chart-point ${series.color}`} cx={series.lastPoint.x} cy={series.lastPoint.y} r="4" />
+                    </g>
+                  ))}
                   <g
                     fill="#8B9482"
                     fontSize="11"
                     fontFamily="Plus Jakarta Sans"
                     textAnchor="middle"
                   >
-                    {[
-                      "Seg",
-                      "Ter",
-                      "Qua",
-                      "Qui",
-                      "Sex",
-                      "Sáb",
-                      "Dom",
-                      "Hoje"
-                    ].map((day, index) => (
-                      <text key={day} x={30 + index * 84.3} y="238">
-                        {day}
+                    {chartLabels[range].map((label, index) => (
+                      <text key={`${label}-${index}`} x={30 + index * (590 / (chartLabels[range].length - 1))} y="238">
+                        {label}
                       </text>
                     ))}
                   </g>

@@ -14,6 +14,7 @@ import {
   WifiOff,
 } from "lucide-react";
 import Sidebar from "../components/Sidebar";
+import "../styles/account.css";
 
 type Tab = "perfil" | "fazendas" | "culturas" | "dispositivos";
 export interface Usuario {
@@ -64,6 +65,30 @@ const emptyDevice = {
   id_fazenda: "",
   id_campo: "",
 };
+
+const demoUsuario: Usuario = {
+  id_usuario: 1,
+  nome: "Miguel Maximus",
+  email: "miguelmaximus2008@gmail.com",
+  telefone: "(11) 98765-4321",
+  tipo_usuario: "ADMIN",
+};
+
+const demoFazendas: Fazenda[] = [
+  { id: 1, nome: "Fazenda Vale Verde", localizacao: "São José do Rio Preto - SP" },
+  { id: 2, nome: "Lote Estrela", localizacao: "Bauru - SP" },
+];
+
+const demoCulturas: Cultura[] = [
+  { id: 1, nome: "Soja", descricao: "Cultura de alta produtividade para clima temperado.", umidadeMin: 40, umidadeMax: 65 },
+  { id: 2, nome: "Milho", descricao: "Ajuste ideal para irrigação em estágios de desenvolvimento.", umidadeMin: 35, umidadeMax: 60 },
+  { id: 3, nome: "Café", descricao: "Requer monitoramento mais frequente em regiões de maior elevação.", umidadeMin: 45, umidadeMax: 70 },
+];
+
+const demoDispositivos: Dispositivo[] = [
+  { id: 1, nome: "ESP32-01", mac: "A0:B7:65:12:33:AA", online: true, id_fazenda: 1, id_campo: 1, fazenda: "Fazenda Vale Verde" },
+  { id: 2, nome: "ESP32-02", mac: "A0:B7:65:12:33:BB", online: false, id_fazenda: 2, id_campo: 2, fazenda: "Lote Estrela" },
+];
 
 function Field({
   label,
@@ -161,6 +186,24 @@ export default function Conta() {
   }, []);
 
   useEffect(() => {
+    const applyDemoData = () => {
+      setDadosUsuario(demoUsuario);
+      setPerfil({
+        nome: demoUsuario.nome,
+        email: demoUsuario.email,
+        telefone: demoUsuario.telefone || "",
+        documento: "",
+        tipo_usuario: demoUsuario.tipo_usuario,
+      });
+      setFazendas(demoFazendas);
+      setCulturas(demoCulturas);
+      setDispositivos(demoDispositivos);
+      setFeedback({
+        text: "Modo demonstração ativo: os dados da conta foram carregados localmente porque o banco não está disponível.",
+        error: false,
+      });
+    };
+
     if (!idUsuario) {
       setFeedback({
         text: "Faça login novamente para acessar sua conta.",
@@ -169,6 +212,7 @@ export default function Conta() {
       setLoading(false);
       return;
     }
+
     Promise.all([
       api.get<Usuario>(`/api/usuario/${idUsuario}`),
       api.get<Fazenda[]>("/api/fazendas", {
@@ -192,7 +236,10 @@ export default function Conta() {
         setCulturas(crops.data);
         setDispositivos(devices.data);
       })
-      .catch((error) => setFeedback({ text: apiError(error), error: true }))
+      .catch((error) => {
+        console.warn("Falling back to demo account data:", error);
+        applyDemoData();
+      })
       .finally(() => setLoading(false));
   }, [idUsuario]);
 
@@ -281,9 +328,9 @@ export default function Conta() {
       <Sidebar />
       <main className="account-page min-w-0 px-4 py-7 text-[#243126] sm:px-6 lg:px-10">
       <div className="mx-auto max-w-5xl">
-        <header className="mb-8 flex items-end justify-between gap-6">
-          <div><p className="text-[10px] font-bold uppercase tracking-[.16em] text-[#3A7D44]">{dateTime}</p><h1 className="mt-2 font-serif text-3xl font-medium">Bom dia, equipe Agrovia</h1><p className="mt-2 text-sm text-[#687263]">{dadosUsuario?.tipo_usuario || "AGRICULTOR"} · Gerencie seus dados, fazendas, culturas e dispositivos ESP32.</p></div>
-          <div className="flex items-center gap-3"><span className="hidden items-center gap-2 text-xs font-semibold text-[#3A7D44] sm:flex"><i className="h-2 w-2 animate-pulse rounded-full bg-[#3A7D44]" />Sistema conectado</span><button type="button" title="Editar avatar" className="flex h-10 w-10 items-center justify-center rounded-full bg-[#3A7D44] text-sm font-bold text-white">{initials}</button></div>
+        <header className="account-heading mb-8 flex items-end justify-between gap-6">
+          <div><p className="text-[10px] font-bold uppercase tracking-[.16em] text-[#3A7D44]">{dateTime}</p><h1 className="mt-2 font-serif text-3xl font-medium">Minha conta Agrovia</h1><p className="mt-2 text-sm text-[#687263]">{dadosUsuario?.tipo_usuario || "AGRICULTOR"} · Gerencie seus dados, fazendas, culturas e dispositivos ESP32.</p></div>
+          <div className="flex items-center gap-3"><span className="hidden items-center gap-2 text-xs font-semibold text-[#76591f] sm:flex"><i className="h-2 w-2 rounded-full bg-[#c59a45]" />Modo demonstração</span><span aria-hidden="true" className="flex h-10 w-10 items-center justify-center rounded-full bg-[#3A7D44] text-sm font-bold text-white">{initials}</span></div>
         </header>
         {feedback && (
           <div
@@ -292,13 +339,13 @@ export default function Conta() {
             {feedback.text}
           </div>
         )}
-        <div className="mb-6 flex gap-1 overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.03] p-1">
+        <div className="account-tabs mb-6 flex gap-1 overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.03] p-1">
           {tabs.map(({ id, label, icon: Icon }) => (
             <button
               type="button"
               key={id}
               onClick={() => setAba(id)}
-              className={`flex min-w-[120px] flex-1 items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium ${aba === id ? "border border-emerald-700/40 bg-emerald-900/60 text-emerald-300" : "text-slate-400 hover:bg-white/5"}`}
+              className={`account-tab flex min-w-[120px] flex-1 items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium ${aba === id ? "active border border-emerald-700/40 bg-emerald-900/60 text-emerald-300" : "text-slate-400 hover:bg-white/5"}`}
             >
               <Icon size={16} />
               {label}
@@ -306,7 +353,7 @@ export default function Conta() {
           ))}
         </div>
         {aba === "perfil" && (
-          <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 shadow-xl">
+          <section className="account-section rounded-2xl border border-white/10 bg-white/[0.04] p-6 shadow-xl">
             <h2 className="text-lg font-semibold">Dados do fazendeiro</h2>
             <form
               onSubmit={handleProfileSubmit}
@@ -352,7 +399,7 @@ export default function Conta() {
           </section>
         )}
         {aba === "fazendas" && (
-          <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 shadow-xl">
+          <section className="account-section rounded-2xl border border-white/10 bg-white/[0.04] p-6 shadow-xl">
             <h2 className="text-lg font-semibold">Fazendas cadastradas</h2>
             <form
               onSubmit={handleFarmSubmit}
@@ -393,7 +440,7 @@ export default function Conta() {
           </section>
         )}
         {aba === "culturas" && (
-          <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 shadow-xl">
+          <section className="account-section rounded-2xl border border-white/10 bg-white/[0.04] p-6 shadow-xl">
             <h2 className="text-lg font-semibold">Culturas cadastradas</h2>
             <form
               onSubmit={handleCultureSubmit}
@@ -448,7 +495,7 @@ export default function Conta() {
           </section>
         )}
         {aba === "dispositivos" && (
-          <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 shadow-xl">
+          <section className="account-section rounded-2xl border border-white/10 bg-white/[0.04] p-6 shadow-xl">
             <h2 className="text-lg font-semibold">Dispositivos ESP32</h2>
             <form
               onSubmit={handleDeviceSubmit}

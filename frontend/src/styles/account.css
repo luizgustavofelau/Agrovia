@@ -1,0 +1,124 @@
+.account-page {
+  background:
+    radial-gradient(ellipse at 92% 2%, rgba(93, 133, 72, 0.09), transparent 30rem),
+    #f4f2e9;
+}
+
+.account-page > div {
+  max-width: 1120px;
+}
+
+.account-heading {
+  padding-bottom: 1.4rem;
+  border-bottom: 1px solid rgba(58, 82, 48, 0.14);
+}
+
+.account-heading h1 {
+  color: #243126;
+  font-size: clamp(1.75rem, 2.4vw, 2.1rem);
+}
+
+.account-heading button {
+  box-shadow: 0 8px 18px rgba(58, 125, 68, 0.2);
+}
+
+.account-tabs {
+  width: fit-content;
+  max-width: 100%;
+  padding: 5px;
+  background: rgba(255, 255, 255, 0.62);
+  border-color: rgba(58, 82, 48, 0.13);
+  box-shadow: 0 5px 18px rgba(42, 54, 35, 0.04);
+}
+
+.account-tab {
+  min-height: 42px;
+  color: #687263;
+  transition: color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+.account-tab:hover {
+  color: #254e2c;
+  background: #f0f3eb;
+}
+
+.account-tab.active {
+  border-color: transparent;
+  background: #254e2c;
+  color: #fffefa;
+  box-shadow: 0 4px 10px rgba(37, 78, 44, 0.18);
+}
+
+.account-page .account-section {
+  padding: clamp(1.25rem, 3vw, 2rem);
+  border-color: #e2e4d9 !important;
+  border-radius: 18px;
+  box-shadow: 0 14px 38px rgba(42, 54, 35, 0.07);
+}
+
+.account-section h2 {
+  font-size: 1.2rem;
+  color: #243126;
+}
+
+.account-section input,
+.account-section select {
+  min-height: 44px;
+  border-radius: 10px;
+  background: #fbfbf7 !important;
+  border-color: #dfe3d8 !important;
+  color: #243126 !important;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.account-section input:focus,
+.account-section select:focus {
+  border-color: #4c7a3b !important;
+  box-shadow: 0 0 0 3px rgba(76, 122, 59, 0.12);
+}
+
+.account-section label > span {
+  color: #687263;
+  letter-spacing: 0.07em;
+}
+
+.account-section button[type="submit"] {
+  min-height: 44px;
+  border-radius: 10px;
+  background: #315c35;
+  box-shadow: 0 7px 16px rgba(49, 92, 53, 0.16);
+  transition: background 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+}
+
+.account-section button[type="submit"]:hover:not(:disabled) {
+  background: #254e2c;
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px rgba(49, 92, 53, 0.22);
+}
+
+.account-section .bg-slate-900\/50 {
+  background: #f8f9f4;
+}
+
+.account-section .border-white\/10 {
+  border-color: #e2e4d9;
+}
+
+.account-section .text-slate-400 {
+  color: #687263;
+}
+
+@media (max-width: 640px) {
+  .account-heading {
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .account-tabs {
+    width: 100%;
+  }
+
+  .account-tab {
+    min-width: 105px;
+  }
+}
