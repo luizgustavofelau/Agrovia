@@ -66,30 +66,6 @@ const emptyDevice = {
   id_campo: "",
 };
 
-const demoUsuario: Usuario = {
-  id_usuario: 1,
-  nome: "Miguel Maximus",
-  email: "miguelmaximus2008@gmail.com",
-  telefone: "(11) 98765-4321",
-  tipo_usuario: "ADMIN",
-};
-
-const demoFazendas: Fazenda[] = [
-  { id: 1, nome: "Fazenda Vale Verde", localizacao: "São José do Rio Preto - SP" },
-  { id: 2, nome: "Lote Estrela", localizacao: "Bauru - SP" },
-];
-
-const demoCulturas: Cultura[] = [
-  { id: 1, nome: "Soja", descricao: "Cultura de alta produtividade para clima temperado.", umidadeMin: 40, umidadeMax: 65 },
-  { id: 2, nome: "Milho", descricao: "Ajuste ideal para irrigação em estágios de desenvolvimento.", umidadeMin: 35, umidadeMax: 60 },
-  { id: 3, nome: "Café", descricao: "Requer monitoramento mais frequente em regiões de maior elevação.", umidadeMin: 45, umidadeMax: 70 },
-];
-
-const demoDispositivos: Dispositivo[] = [
-  { id: 1, nome: "ESP32-01", mac: "A0:B7:65:12:33:AA", online: true, id_fazenda: 1, id_campo: 1, fazenda: "Fazenda Vale Verde" },
-  { id: 2, nome: "ESP32-02", mac: "A0:B7:65:12:33:BB", online: false, id_fazenda: 2, id_campo: 2, fazenda: "Lote Estrela" },
-];
-
 function Field({
   label,
   value,
@@ -139,7 +115,9 @@ function Button({
 
 export default function Conta() {
   const idUsuario = Number(localStorage.getItem("usuarioId"));
-  const [aba, setAba] = useState<Tab>("perfil");
+  const [aba, setAba] = useState<Tab>(() =>
+    new URLSearchParams(window.location.search).get("aba") === "dispositivos" ? "dispositivos" : "perfil",
+  );
   const [dadosUsuario, setDadosUsuario] = useState<Usuario | null>(null);
   const [perfil, setPerfil] = useState({
     nome: "",
@@ -155,6 +133,7 @@ export default function Conta() {
   const [culture, setCulture] = useState(emptyCulture);
   const [device, setDevice] = useState(emptyDevice);
   const [loading, setLoading] = useState(true);
+  const [modoDemonstracao, setModoDemonstracao] = useState(false);
   const [saving, setSaving] = useState<Tab | null>(null);
   const [feedback, setFeedback] = useState<{
     text: string;
@@ -186,24 +165,6 @@ export default function Conta() {
   }, []);
 
   useEffect(() => {
-    const applyDemoData = () => {
-      setDadosUsuario(demoUsuario);
-      setPerfil({
-        nome: demoUsuario.nome,
-        email: demoUsuario.email,
-        telefone: demoUsuario.telefone || "",
-        documento: "",
-        tipo_usuario: demoUsuario.tipo_usuario,
-      });
-      setFazendas(demoFazendas);
-      setCulturas(demoCulturas);
-      setDispositivos(demoDispositivos);
-      setFeedback({
-        text: "Modo demonstração ativo: os dados da conta foram carregados localmente porque o banco não está disponível.",
-        error: false,
-      });
-    };
-
     if (!idUsuario) {
       setFeedback({
         text: "Faça login novamente para acessar sua conta.",
@@ -235,10 +196,16 @@ export default function Conta() {
         setFazendas(farms.data);
         setCulturas(crops.data);
         setDispositivos(devices.data);
+        const demo = [user, farms, crops, devices].some(
+          (response) => response.headers["x-data-source"] === "demo",
+        );
+        setModoDemonstracao(demo);
+        setFeedback(demo
+          ? { text: "Modo demonstração ativo: alterações ficam na memória do servidor e não são gravadas no MySQL.", error: false }
+          : null);
       })
       .catch((error) => {
-        console.warn("Falling back to demo account data:", error);
-        applyDemoData();
+        setFeedback({ text: apiError(error), error: true });
       })
       .finally(() => setLoading(false));
   }, [idUsuario]);
@@ -253,7 +220,10 @@ export default function Conta() {
       );
       setDadosUsuario(data);
       localStorage.setItem("usuarioNome", data.nome);
-      setFeedback({ text: "Perfil atualizado com sucesso.", error: false });
+      setFeedback({
+        text: modoDemonstracao ? "Perfil atualizado em modo demonstração; não foi gravado no MySQL." : "Perfil atualizado com sucesso.",
+        error: false,
+      });
     } catch (error) {
       setFeedback({ text: apiError(error), error: true });
     } finally {
@@ -270,7 +240,10 @@ export default function Conta() {
       });
       setFazendas((items) => [...items, data]);
       setFarm({ nome_fazenda: "", localizacao: "" });
-      setFeedback({ text: "Fazenda cadastrada com sucesso.", error: false });
+      setFeedback({
+        text: modoDemonstracao ? "Fazenda incluída em modo demonstração; não foi gravada no MySQL." : "Fazenda cadastrada com sucesso.",
+        error: false,
+      });
     } catch (error) {
       setFeedback({ text: apiError(error), error: true });
     } finally {
@@ -288,7 +261,10 @@ export default function Conta() {
       });
       setCulturas((items) => [...items, data]);
       setCulture(emptyCulture);
-      setFeedback({ text: "Cultura cadastrada com sucesso.", error: false });
+      setFeedback({
+        text: modoDemonstracao ? "Cultura incluída em modo demonstração; não foi gravada no MySQL." : "Cultura cadastrada com sucesso.",
+        error: false,
+      });
     } catch (error) {
       setFeedback({ text: apiError(error), error: true });
     } finally {
@@ -307,7 +283,7 @@ export default function Conta() {
       setDispositivos((items) => [...items, data]);
       setDevice(emptyDevice);
       setFeedback({
-        text: "Dispositivo ESP32 vinculado com sucesso.",
+        text: modoDemonstracao ? "Dispositivo incluído em modo demonstração; não foi gravado no MySQL." : "Dispositivo ESP32 vinculado com sucesso.",
         error: false,
       });
     } catch (error) {
@@ -330,11 +306,12 @@ export default function Conta() {
       <div className="mx-auto max-w-5xl">
         <header className="account-heading mb-8 flex items-end justify-between gap-6">
           <div><p className="text-[10px] font-bold uppercase tracking-[.16em] text-[#3A7D44]">{dateTime}</p><h1 className="mt-2 font-serif text-3xl font-medium">Minha conta Agrovia</h1><p className="mt-2 text-sm text-[#687263]">{dadosUsuario?.tipo_usuario || "AGRICULTOR"} · Gerencie seus dados, fazendas, culturas e dispositivos ESP32.</p></div>
-          <div className="flex items-center gap-3"><span className="hidden items-center gap-2 text-xs font-semibold text-[#76591f] sm:flex"><i className="h-2 w-2 rounded-full bg-[#c59a45]" />Modo demonstração</span><span aria-hidden="true" className="flex h-10 w-10 items-center justify-center rounded-full bg-[#3A7D44] text-sm font-bold text-white">{initials}</span></div>
+          <div className="flex items-center gap-3">{modoDemonstracao && <span className="hidden items-center gap-2 text-xs font-semibold text-[#76591f] sm:flex"><i className="h-2 w-2 rounded-full bg-[#c59a45]" />Modo demonstração</span>}<span aria-hidden="true" className="flex h-10 w-10 items-center justify-center rounded-full bg-[#3A7D44] text-sm font-bold text-white">{initials}</span></div>
         </header>
         {feedback && (
           <div
-            className={`mb-5 rounded-xl border px-4 py-3 text-sm ${feedback.error ? "border-red-500/30 bg-red-500/10 text-red-300" : "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"}`}
+            className={`account-feedback mb-5 ${feedback.error ? "error" : "success"}`}
+            role={feedback.error ? "alert" : "status"}
           >
             {feedback.text}
           </div>

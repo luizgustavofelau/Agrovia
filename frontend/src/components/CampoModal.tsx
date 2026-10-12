@@ -88,6 +88,7 @@ export default function CampoModal({ aberto, onFechar, onSalvar }: CampoModalPro
   const [form, setForm] = useState<FormState>(FORM_INICIAL);
   const [erros, setErros] = useState<Record<string, string>>({});
   const [salvando, setSalvando] = useState(false);
+  const [erroSalvamento, setErroSalvamento] = useState("");
   const primeiroCampo = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -95,6 +96,7 @@ export default function CampoModal({ aberto, onFechar, onSalvar }: CampoModalPro
     setForm(FORM_INICIAL);
     setErros({});
     setSalvando(false);
+    setErroSalvamento("");
     primeiroCampo.current?.focus();
   }, [aberto]);
 
@@ -126,15 +128,21 @@ export default function CampoModal({ aberto, onFechar, onSalvar }: CampoModalPro
     if (Object.keys(novosErros).length > 0) return;
 
     setSalvando(true);
-    await onSalvar({
-      nome: form.nome.trim(),
-      localizacao: form.localizacao.trim(),
-      areaHa: Number(form.areaHa),
-      cultura: form.cultura === "Outra" ? form.culturaOutra.trim() : form.cultura,
-      talhoes: Number(form.talhoes),
-      observacoes: form.observacoes.trim(),
-    });
-    setSalvando(false);
+    setErroSalvamento("");
+    try {
+      await onSalvar({
+        nome: form.nome.trim(),
+        localizacao: form.localizacao.trim(),
+        areaHa: Number(form.areaHa),
+        cultura: form.cultura === "Outra" ? form.culturaOutra.trim() : form.cultura,
+        talhoes: Number(form.talhoes),
+        observacoes: form.observacoes.trim(),
+      });
+    } catch (error) {
+      setErroSalvamento(error instanceof Error ? error.message : "Não foi possível salvar a fazenda.");
+    } finally {
+      setSalvando(false);
+    }
   }
 
   return (
@@ -262,6 +270,8 @@ export default function CampoModal({ aberto, onFechar, onSalvar }: CampoModalPro
               className={`${inputBase} resize-none border-[#e3ddcd]`}
             />
           </Campo>
+
+          {erroSalvamento && <p className="text-sm text-red-700" role="alert">{erroSalvamento}</p>}
 
           <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
             <button

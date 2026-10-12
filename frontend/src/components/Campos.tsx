@@ -1,52 +1,22 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, MapPin, Ruler, LayoutGrid, Sprout } from "lucide-react";
 import CampoModal from "./CampoModal";
 import "../styles/fields.css";
 
-const API_URL = "http://localhost:5000/api/campos";
+const API_URL = "/api/fazendas";
 
 type Campo = {
-  id?: string;
+  id: string | number;
   nome: string;
-  localizacao: string;
-  areaHa: number;
-  cultura: string;
-  talhoes: number;
-  observacoes?: string;
+  localizacao?: string | null;
+  areaHa?: number | null;
+  cultura?: string | null;
+  talhoes?: number | null;
+  observacoes?: string | null;
 };
 
-const camposDemonstracao: Campo[] = [
-  {
-    id: "demo-f01",
-    nome: "Fazenda Santa Rita",
-    localizacao: "São José do Rio Preto · SP",
-    areaHa: 86.5,
-    cultura: "Soja",
-    talhoes: 5,
-    observacoes: "Monitoramento ativo de umidade nos talhões produtivos.",
-  },
-  {
-    id: "demo-f02",
-    nome: "Fazenda Vale Verde",
-    localizacao: "Bauru · SP",
-    areaHa: 42.8,
-    cultura: "Milho",
-    talhoes: 3,
-    observacoes: "Irrigação acompanhada por sensores capacitivos.",
-  },
-  {
-    id: "demo-f03",
-    nome: "Estufa Experimental",
-    localizacao: "Araçatuba · SP",
-    areaHa: 2.4,
-    cultura: "Tomate",
-    talhoes: 4,
-    observacoes: "Área de testes para parâmetros de cultivo controlado.",
-  },
-];
-
-const formatarHa = (valor: number) =>
-  `${Number(valor).toLocaleString("pt-BR", { maximumFractionDigits: 2 })} ha`;
+const formatarHa = (valor?: number | null) =>
+  valor == null ? "Não informado" : `${Number(valor).toLocaleString("pt-BR", { maximumFractionDigits: 2 })} ha`;
 
 function CampoCard({ campo }: { campo: Campo }) {
   return (
@@ -55,13 +25,13 @@ function CampoCard({ campo }: { campo: Campo }) {
         <h3 className="text-lg font-semibold leading-tight text-stone-900">{campo.nome}</h3>
         <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[#1f3a2b]/10 px-3 py-1 text-xs font-medium text-[#1f3a2b]">
           <Sprout size={13} />
-          {campo.cultura}
+          {campo.cultura || "Cultura não informada"}
         </span>
       </div>
 
       <p className="mt-2 flex items-center gap-1.5 text-sm text-stone-500">
         <MapPin size={15} className="shrink-0 text-stone-400" />
-        {campo.localizacao}
+        {campo.localizacao || "Localização não informada"}
       </p>
 
       <dl className="field-metrics mt-5 grid grid-cols-2 gap-3">
@@ -70,14 +40,14 @@ function CampoCard({ campo }: { campo: Campo }) {
             <Ruler size={13} />
             Área total
           </dt>
-          <dd className="mt-1 text-xl font-semibold text-[#1f3a2b]">{formatarHa(campo.areaHa)}</dd>
+          <dd className="mt-1 text-sm font-semibold text-[#1f3a2b]">{formatarHa(campo.areaHa)}</dd>
         </div>
         <div className="rounded-2xl bg-[#f4f1ea] px-4 py-3">
           <dt className="flex items-center gap-1.5 text-xs text-stone-500">
             <LayoutGrid size={13} />
             Talhões
           </dt>
-          <dd className="mt-1 text-xl font-semibold text-[#1f3a2b]">{campo.talhoes}</dd>
+          <dd className="mt-1 text-xl font-semibold text-[#1f3a2b]">{campo.talhoes ?? "Não informado"}</dd>
         </div>
       </dl>
 
@@ -106,25 +76,37 @@ function CardAdicionar({ onClick }: { onClick: () => void }) {
 }
 
 export default function Campos() {
+  const idUsuario = localStorage.getItem("usuarioId");
   const [campos, setCampos] = useState<Campo[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [modalAberto, setModalAberto] = useState(false);
   const [aviso, setAviso] = useState("");
-  const areaTotal = campos.reduce((total, campo) => total + campo.areaHa, 0);
-  const talhoesTotal = campos.reduce((total, campo) => total + campo.talhoes, 0);
+  const [erro, setErro] = useState("");
+  const [dadosDemonstracao, setDadosDemonstracao] = useState(false);
+  const areaTotal = campos.reduce((total, campo) => total + (campo.areaHa || 0), 0);
+  const areaKnownCount = campos.filter((campo) => campo.areaHa != null).length;
+  const talhoesTotal = campos.reduce((total, campo) => total + (campo.talhoes || 0), 0);
+  const talhoesKnownCount = campos.filter((campo) => campo.talhoes != null).length;
 
   useEffect(() => {
     let cancelado = false;
     (async () => {
+      if (!idUsuario) {
+        setErro("Não foi possível identificar a conta. Saia e entre novamente.");
+        setCarregando(false);
+        return;
+      }
       try {
-        const res = await fetch(API_URL);
+        const res = await fetch(`${API_URL}?id_usuario=${encodeURIComponent(idUsuario)}`);
         if (!res.ok) throw new Error();
         const dados = (await res.json()) as Campo[];
-        if (!cancelado) setCampos(dados);
-      } catch {
         if (!cancelado) {
-          setCampos(camposDemonstracao);
-          setAviso("Modo demonstração: propriedades de exemplo. Novos cadastros ficam apenas nesta sessão enquanto a API estiver indisponível.");
+          setCampos(dados);
+          setDadosDemonstracao(res.headers.get("X-Data-Source") === "demo");
+        }
+      } catch (error) {
+        if (!cancelado) {
+          setErro("Não foi possível carregar as fazendas. Verifique a API e tente novamente.");
         }
       } finally {
         if (!cancelado) setCarregando(false);
@@ -133,27 +115,38 @@ export default function Campos() {
     return () => {
       cancelado = true;
     };
-  }, []);
-
-  const fecharModal = useCallback(() => setModalAberto(false), []);
+  }, [idUsuario]);
 
   async function salvarCampo(dados: Omit<Campo, "id">) {
-    let novo: Campo;
+    if (!idUsuario) throw new Error("Faça login novamente antes de cadastrar uma fazenda.");
+
     try {
       const res = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(dados),
+        body: JSON.stringify({
+          nome_fazenda: dados.nome,
+          localizacao: dados.localizacao,
+          id_usuario: Number(idUsuario),
+          cultura: dados.cultura,
+          area_ha: dados.areaHa,
+          qtd_talhoes: dados.talhoes,
+          observacoes: dados.observacoes,
+        }),
       });
-      if (!res.ok) throw new Error();
-      novo = (await res.json()) as Campo;
-    } catch {
-      novo = { id: crypto.randomUUID(), ...dados };
-      setAviso("Campo salvo apenas nesta sessão: o servidor não respondeu.");
+      const resultado = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(resultado.mensagem || "Não foi possível salvar a fazenda.");
+      setCampos((atuais) => [...atuais, resultado as Campo]);
+      const demonstracao = res.headers.get("X-Data-Source") === "demo";
+      setDadosDemonstracao(demonstracao);
+      setAviso(demonstracao
+        ? "Registro criado em modo demonstração; os dados ficam na memória do servidor e não são gravados no MySQL."
+        : "Fazenda salva no banco de dados.");
+      setModalAberto(false);
+    } catch (error) {
+      setErro(error instanceof Error ? error.message : "Não foi possível salvar a fazenda.");
+      throw error;
     }
-
-    setCampos((atuais) => [...atuais, novo]);
-    setModalAberto(false);
   }
 
   return (
@@ -166,14 +159,16 @@ export default function Campos() {
         </p>
       </header>
 
-      {aviso && (
+      {dadosDemonstracao && (
         <div
           role="status"
           className="field-demo-notice mb-6 rounded-2xl bg-amber-50 px-5 py-3 text-sm text-amber-900 ring-1 ring-amber-200"
         >
-          {aviso}
+          Modo demonstração: a API não conseguiu acessar o MySQL; alterações não são persistidas após reiniciar o servidor.
         </div>
       )}
+      {aviso && <p className="mb-5 text-sm text-emerald-800" role="status">{aviso}</p>}
+      {erro && <p className="mb-5 text-sm text-red-700" role="alert">{erro}</p>}
 
       {carregando ? (
         <p className="text-stone-500">Carregando campos...</p>
@@ -182,9 +177,12 @@ export default function Campos() {
           {campos.length > 0 && (
             <div className="field-summary" aria-label="Resumo das propriedades">
               <div><span>Propriedades</span><strong>{campos.length}</strong></div>
-              <div><span>Área cadastrada</span><strong>{formatarHa(areaTotal)}</strong></div>
-              <div><span>Talhões</span><strong>{talhoesTotal}</strong></div>
+              <div><span>Área informada</span><strong>{areaKnownCount ? formatarHa(areaTotal) : "Não informada"}</strong></div>
+              <div><span>Talhões informados</span><strong>{talhoesKnownCount ? talhoesTotal : "Não informado"}</strong></div>
             </div>
+          )}
+          {!carregando && !erro && campos.length === 0 && (
+            <p className="field-empty-state" role="status">Nenhuma fazenda cadastrada. Cadastre a primeira para organizar o monitoramento.</p>
           )}
           <div className="field-grid grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
             {campos.map((c) => (
@@ -195,7 +193,7 @@ export default function Campos() {
         </>
       )}
 
-      <CampoModal aberto={modalAberto} onFechar={fecharModal} onSalvar={salvarCampo} />
+      <CampoModal aberto={modalAberto} onFechar={() => setModalAberto(false)} onSalvar={salvarCampo} />
     </div>
   );
 }

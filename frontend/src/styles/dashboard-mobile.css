@@ -3,3 +3,222 @@
     display: flex;
   }
 }
+
+.dashboard-account-actions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.dashboard-refresh-btn {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--ink);
+  font: 600 12px inherit;
+  cursor: pointer;
+}
+
+.dashboard-refresh-btn:disabled {
+  opacity: 0.65;
+  cursor: progress;
+}
+
+.dashboard-refresh-btn:focus-visible,
+.dashboard-data-error button:focus-visible {
+  outline: 3px solid #a8ca8e;
+  outline-offset: 3px;
+}
+
+.dashboard-data-error {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 18px;
+  padding: 12px 14px;
+  border: 1px solid #e5c6bd;
+  border-radius: 8px;
+  background: #fff4ef;
+  color: #783d2d;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.dashboard-data-error svg {
+  flex: 0 0 auto;
+}
+
+.dashboard-data-error button {
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding: 6px 8px;
+  border: 1px solid #d9a99a;
+  border-radius: 5px;
+  background: transparent;
+  color: #783d2d;
+  font: 700 11px inherit;
+  cursor: pointer;
+}
+
+.dashboard-kpi-text {
+  font-family: inherit !important;
+  font-size: 16px !important;
+  line-height: 1.25 !important;
+}
+
+.dashboard-empty-note {
+  margin: 12px 0;
+  color: var(--ink-soft);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.dashboard-quick-links {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.dashboard-quick-links a {
+  display: flex;
+  min-width: 0;
+  min-height: 38px;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 8px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: #f8f8f2;
+  color: var(--leaf-deep);
+  font-size: 10px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.dashboard-quick-links a:hover {
+  border-color: var(--leaf);
+  background: #edf2e8;
+}
+
+.dashboard-quick-links svg {
+  flex: 0 0 auto;
+}
+
+.dashboard-quick-links a:focus-visible {
+  outline: 3px solid #a8ca8e;
+  outline-offset: 2px;
+}
+
+.dashboard-demo-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  line-height: 1.5;
+}
+
+.dashboard-demo-banner span:last-child {
+  color: inherit;
+}
+
+.dashboard-empty-state {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 22px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--ink-soft);
+}
+
+.dashboard-empty-state > svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: var(--leaf);
+}
+
+.dashboard-empty-state strong {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.dashboard-empty-state p {
+  max-width: 700px;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.dashboard-empty-state a {
+  flex: 0 0 auto;
+  margin-left: auto;
+  color: var(--leaf-deep);
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.dashboard-empty-state a:focus-visible {
+  outline: 3px solid #a8ca8e;
+  outline-offset: 3px;
+}
+
+@media (max-width: 680px) {
+  .dashboard-light .dashboard-nav-item span {
+    max-width: 100%;
+    white-space: normal;
+    line-height: 1.05;
+  }
+
+  .dashboard-light .dashboard-topbar {
+    flex-direction: column;
+  }
+
+  .dashboard-light .dashboard-account-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .dashboard-data-error {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .dashboard-data-error button {
+    margin-left: 28px;
+  }
+
+  .dashboard-empty-state {
+    flex-wrap: wrap;
+    padding: 17px;
+  }
+
+  .dashboard-empty-state a {
+    margin-left: 32px;
+  }
+
+  .dashboard-quick-links {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) and (min-width: 681px) {
+  .dashboard-light .dashboard-topbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .dashboard-light .dashboard-account-actions {
+    align-self: flex-end;
+  }
+}

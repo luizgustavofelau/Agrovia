@@ -56,23 +56,23 @@ const Login: React.FC = () => {
           <h2>Controle inteligente da irrigação em uma única plataforma.</h2>
 
           <p>
-            Monitore umidade, temperatura e produtividade em tempo real para tomar decisões com precisão.
+            Organize campos e dispositivos e consulte estudos agrícolas. Leituras em tempo real dependem de sensores e integrações ativos.
           </p>
 
           <ul className="login-feature-list">
-            <li>Monitoramento 24/7 em tempo real</li>
-            <li>Detecção automática de irrigação</li>
-            <li>Dashboard operacional para campo e gestão</li>
+            <li>Organização de campos e culturas cadastrados</li>
+            <li>Consulta aos dispositivos registrados</li>
+            <li>Estudos agrícolas com referências técnicas</li>
           </ul>
 
           <div className="login-metrics">
             <div>
-              <strong>60%</strong>
-              <span>Economia de água</span>
+              <strong>5</strong>
+              <span>Culturas nos estudos</span>
             </div>
             <div>
-              <strong>3s</strong>
-              <span>Resposta do sistema</span>
+              <strong>API</strong>
+              <span>Cadastros e integrações identificados</span>
             </div>
           </div>
         </aside>

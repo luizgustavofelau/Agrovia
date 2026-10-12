@@ -1,10 +1,46 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Activity, BookOpen, CloudSun, Droplets, FileText, Map, Radio, Sprout, Waves } from "lucide-react";
 import "../styles/landing.css";
+
+const processSteps = [
+  { title: "Observe o solo", description: "Textura, profundidade, cobertura e drenagem mudam a forma como a água se movimenta e fica disponível às raízes. Uma leitura representa o local e a camada em que foi feita.", icon: Droplets },
+  { title: "Registre as leituras", description: "Sensores instalados e calibrados podem registrar variações de umidade ao longo do tempo. Posição, profundidade e manutenção influenciam a qualidade da medição.", icon: Radio },
+  { title: "Organize o contexto", description: "Associe registros ao campo, à cultura, à fase de desenvolvimento e às condições do tempo. Esse contexto ajuda a comparar períodos sem tratar uma medida isolada como regra.", icon: Map },
+  { title: "Avalie a necessidade", description: "Considere os dados junto da observação da lavoura, do solo e do sistema de irrigação. A plataforma apoia a análise; não aciona irrigação automaticamente.", icon: Activity },
+  { title: "Acompanhe os resultados", description: "Registre o manejo realizado e observe a resposta da área para revisar o planejamento. Comparações úteis dependem de dados consistentes e de condições locais.", icon: FileText },
+];
+
+const benefits = [
+  { title: "Umidade com contexto", description: "Acompanhe leituras vinculadas a um ponto e a uma profundidade; elas não representam, sozinhas, todo o talhão." },
+  { title: "Planejamento mais informado", description: "Cruze observações, clima, fase da cultura e capacidade do sistema antes de definir o manejo hídrico." },
+  { title: "Campos organizados", description: "Reúna localização, cultura e dados de área cadastrados para facilitar consultas e comparações." },
+  { title: "Dispositivos identificados", description: "Consulte nome, vínculo e status de conexão dos dispositivos registrados na plataforma." },
+  { title: "Pontos de atenção visíveis", description: "Identifique falta de informação ou mudanças que merecem conferência no campo, sem classificar automaticamente uma área como crítica." },
+  { title: "Histórico com continuidade", description: "Com integração de telemetria ativa, registros consistentes podem apoiar comparações entre datas e operações." },
+];
+
+const features = [
+  { title: "Painel de monitoramento", description: "Veja um resumo de campos e dispositivos. Leituras, gráficos históricos e alertas aparecem como indisponíveis até a integração de telemetria.", icon: Activity },
+  { title: "Campos e propriedades", description: "Cadastre fazendas com localização, cultura, área e talhões. Informações não preenchidas continuam identificadas como ausentes.", icon: Sprout },
+  { title: "Sensores e dispositivos", description: "Consulte nome, código MAC, fazenda vinculada e conexão. A tela não apresenta uma leitura de solo que a API não forneceu.", icon: Radio },
+  { title: "Relatórios e alertas", description: "Encontre as áreas reservadas para análise e ocorrências. Os resultados dependem de leituras históricas e regras configuradas.", icon: FileText },
+  { title: "Biblioteca agrícola", description: "Leia materiais por cultura, navegue pelos capítulos, pesquise assuntos e consulte referências técnicas ao final dos estudos.", icon: BookOpen },
+  { title: "Contexto de cultivo", description: "Considere clima, solo, sistema de produção e fase de desenvolvimento; a recomendação precisa ser adaptada à propriedade.", icon: CloudSun },
+];
+
+const cropPreviews = [
+  { name: "Milho", category: "Cereal", image: "/img/milho.jpg", imageAlt: "Lavoura de milho", description: "Acompanhe emergência, crescimento vegetativo, florescimento e enchimento de grãos. O material aborda como época, solo e disponibilidade de água interagem em diferentes sistemas de produção." },
+  { name: "Soja", category: "Leguminosa", image: "/img/soja.jpg", imageAlt: "Plantas e vagens de soja", description: "Explore desenvolvimento, nodulação, ambiente e manejo hídrico da soja. As orientações consideram que cultivar, fotoperíodo e calendário variam conforme a região." },
+  { name: "Cana-de-açúcar", category: "Gramínea perene", image: "/img/cana-de-acucar.jpg", imageAlt: "Colheita em um canavial", imageCredit: "Foto: proudlyswazi / Unsplash", description: "Entenda o estabelecimento do canavial, o perfilhamento, os ciclos de corte e a rebrota da soqueira. O manejo de água e solo depende do ambiente, da variedade e do sistema de produção." },
+  { name: "Café", category: "Cultura perene", image: "/img/cafe.jpg", imageAlt: "Cerejas amarelas de café arábica em um ramo", imageCredit: "Foto: 1500mcoffee / Pexels", description: "Conheça diferenças entre espécies, fases fenológicas e condições de cultivo. Floradas, desenvolvimento dos frutos, solo e disponibilidade hídrica precisam ser interpretados no contexto de cada região." },
+  { name: "Feijão", category: "Leguminosa", image: "/img/feijao.jpg", imageAlt: "Cultivo de feijão", description: "Revise estabelecimento, florescimento, formação de vagens e enchimento de grãos. O conteúdo relaciona estresse hídrico, drenagem e escolha de época às condições locais." },
+];
 
 const ParallaxDrops: React.FC = () => {
   const navigate = useNavigate();
   const [scrollY, setScrollY] = useState(0);
+  const midSectionRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -27,13 +63,19 @@ const ParallaxDrops: React.FC = () => {
     };
 
     window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
+    window.addEventListener("resize", handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", handleScroll);
+    };
   }, []);
 
-  const heroParallax = scrollY * 0.18;
-  const heroContentParallax = scrollY * 0.08;
-  const midParallax = (scrollY - 300) * 0.22;
-  const overlayParallax = scrollY * 0.28;
+  const limitar = (valor: number, minimo: number, maximo: number) => Math.min(maximo, Math.max(minimo, valor));
+  const heroParallax = limitar(scrollY * 0.14, 0, 110);
+  const heroContentParallax = limitar(scrollY * 0.04, 0, 32);
+  const midSectionTop = midSectionRef.current?.getBoundingClientRect().top ?? window.innerHeight;
+  const midParallax = limitar((window.innerHeight / 2 - midSectionTop) * 0.07, -50, 50);
+  const overlayParallax = limitar(scrollY * 0.18, 0, 130);
 
   return (
     <div className="landing-container">
@@ -51,10 +93,13 @@ const ParallaxDrops: React.FC = () => {
             <a href="#how">Como Funciona</a>
           </li>
           <li>
-            <a href="#tech">Tecnologia</a>
+            <a href="#benefits">Benefícios</a>
           </li>
           <li>
-            <a href="#crops">Culturas</a>
+            <a href="#features">Recursos</a>
+          </li>
+          <li>
+            <a href="#library">Estudos</a>
           </li>
         </ul>
         <button className="nav-cta" onClick={() => navigate("/login")}>
@@ -64,12 +109,7 @@ const ParallaxDrops: React.FC = () => {
       </nav>
 
       {/* ──── HERO ──── */}
-      <section
-        className="hero"
-        style={{
-          backgroundPosition: `center ${heroParallax}px`,
-        }}
-      >
+      <section className="hero">
         <div
           className="hero-bg"
           id="heroBg"
@@ -111,123 +151,60 @@ const ParallaxDrops: React.FC = () => {
           </div>
           <p className="hero-eyebrow">Irrigação Inteligente · ESP32 · IoT · Agronegócio</p>
           <h1 className="hero-title">
-            Cultive <span style={{ color: "#7fff6a" }}>com inteligência</span>
+            Decisões melhores <span style={{ color: "#7fff6a" }}>começam no solo</span>
           </h1>
           <p className="hero-sub">
-            Sistema autônomo de irrigação que lê a umidade do solo, espécie da planta e temperatura ambiente — e decide sozinho quando irrigar.
+            A Agrovia organiza informações da propriedade e dos dispositivos para apoiar o acompanhamento da umidade do solo. Ao relacionar essas observações com clima, cultura e fase de desenvolvimento, o produtor ganha contexto para planejar a irrigação. A decisão continua dependente das condições e da avaliação de cada área.
           </p>
           <div className="hero-btns">
             <button className="btn-primary" onClick={() => navigate("/login")}>
-              Começar Agora
+              Acessar plataforma
             </button>
-            <button className="btn-outline" onClick={() => document.getElementById("about")?.scrollIntoView()}>
-              Saiba Mais
+            <button className="btn-outline" onClick={() => document.getElementById("features")?.scrollIntoView()}>
+              Conhecer recursos
             </button>
           </div>
         </div>
       </section>
 
-      {/* ──── STATS ──── */}
-      <div className="stats-bar">
-        <div className="stat-item">
-          <div className="stat-num">60%</div>
-          <div className="stat-label">Economia de água</div>
-        </div>
-        <div className="stat-item">
-          <div className="stat-num">24/7</div>
-          <div className="stat-label">Monitoramento</div>
-        </div>
-        <div className="stat-item">
-          <div className="stat-num">3 s</div>
-          <div className="stat-label">Resposta dos sensores</div>
-        </div>
-        <div className="stat-item">
-          <div className="stat-num">100%</div>
-          <div className="stat-label">Controle remoto</div>
-        </div>
-      </div>
-
       {/* ──── ABOUT ──── */}
       <section className="about" id="about">
-        <div className="about-screens">
-          <div className="about-card">
-            <div className="card-label">Umidade Geral</div>
-            <div className="gauge-row">
-              <div className="gauge-circle">72%</div>
-              <div className="gauge-info">
-                <div className="gauge-name">Solo</div>
-                <div className="gauge-bar-wrap">
-                  <div className="gauge-bar" style={{ width: "72%" }}></div>
-                </div>
-              </div>
-            </div>
-            <div className="gauge-row" style={{ marginTop: "1.2rem" }}>
-              <div className="gauge-circle">58%</div>
-              <div className="gauge-info">
-                <div className="gauge-name">Ar</div>
-                <div className="gauge-bar-wrap">
-                  <div className="gauge-bar" style={{ width: "58%" }}></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="about-card">
-            <div className="card-label">Temperatura</div>
-            <div className="temp-row">
-              <div className="temp-big">28°C</div>
-              <div className="temp-status">Ótima</div>
-            </div>
-            <div className="chip-row">
-              <div className="chip">Umidade Solo: 72%</div>
-              <div className="chip">Ar: 58%</div>
-              <div className="chip">Irrigar: Sim</div>
-            </div>
-          </div>
+        <div className="about-visual" aria-label="Solo, sensores e análise">
+          <div className="about-visual-line"><span><Waves size={22} /></span><div><strong>Solo</strong><small>Condições variáveis</small></div></div>
+          <div className="about-visual-line"><span><Radio size={22} /></span><div><strong>Informações</strong><small>Leituras e registros</small></div></div>
+          <div className="about-visual-line"><span><Sprout size={22} /></span><div><strong>Manejo</strong><small>Decisão contextualizada</small></div></div>
         </div>
-
-        <div>
+        <div className="about-copy">
           <p className="section-tag">Monitoramento</p>
-          <h2 className="section-title">Acompanhe em tempo real</h2>
-          <p className="section-body">Visualize todos os parâmetros da sua plantação em um único painel intuitivo. Receba alertas quando algo sair do intervalo ideal e tome ações imediatas.</p>
+          <h2 className="section-title">Entenda o que acontece antes de irrigar</h2>
+          <p className="section-body">A água no solo não é uniforme: textura, estrutura, relevo, cobertura e profundidade das raízes influenciam infiltração e armazenamento. Por isso, uma medição representa apenas o local e a camada em que foi feita. Interpretada junto da chuva, do clima, da cultura e de sua fase, ela pode compor uma análise mais completa da área.</p>
+          <p className="section-body about-followup">A plataforma ajuda a reunir esse contexto e a consultar os registros disponíveis. Ela não substitui a observação da lavoura, a calibração do sensor nem a orientação agronômica adaptada à propriedade.</p>
+          <a className="text-link" href="#how">Veja como a plataforma organiza esse processo <span aria-hidden="true">→</span></a>
         </div>
       </section>
 
       {/* ──── HOW IT WORKS ──── */}
       <section className="how" id="how">
-        <div style={{ textAlign: "center" }}>
+        <div className="section-heading">
           <p className="section-tag">Processo</p>
-          <h2 className="section-title">Como Funciona</h2>
+          <h2 className="section-title">Da leitura à decisão</h2>
+          <p className="section-body">Um percurso para transformar observações em informação organizada e apoiar uma decisão revisável, com a realidade do talhão sempre em primeiro plano.</p>
         </div>
         <div className="how-grid">
-          <div className="how-step">
-            <div className="step-number">1</div>
-            <div className="step-icon">🌱</div>
-            <div className="step-title">Sensores Capturam Dados</div>
-            <div className="step-desc">Sensores capacitivos medem a umidade do solo em tempo real, sem interferências.</div>
-          </div>
-          <div className="how-step">
-            <div className="step-number">2</div>
-            <div className="step-icon">⚙️</div>
-            <div className="step-title">ESP32 Processa</div>
-            <div className="step-desc">O microcontrolador ESP32 analisa os dados e toma decisões de irrigação autonomamente.</div>
-          </div>
-          <div className="how-step">
-            <div className="step-number">3</div>
-            <div className="step-icon">💧</div>
-            <div className="step-title">Bomba Ativa</div>
-            <div className="step-desc">A bomba d'água é acionada automaticamente quando a umidade cai abaixo do limite.</div>
-          </div>
+          {processSteps.map(({ title, description, icon: Icon }, index) => (
+            <article className="how-step" key={title}>
+              <div className="step-number">0{index + 1}</div>
+              <div className="step-icon"><Icon size={22} aria-hidden="true" /></div>
+              <h3 className="step-title">{title}</h3>
+              <p className="step-desc">{description}</p>
+            </article>
+          ))}
         </div>
+        <p className="process-note">O fluxo é educativo. A coleta, o histórico e qualquer automação dependem dos sensores e das integrações efetivamente instalados e configurados.</p>
       </section>
 
       {/* ──── PARALLAX MID ──── */}
-      <div
-        className="parallax-mid"
-        style={{
-          backgroundPosition: `center ${midParallax}px`,
-        }}
-      >
+      <div className="parallax-mid" ref={midSectionRef}>
         <div
           className="parallax-mid-bg"
           id="midBg"
@@ -238,174 +215,71 @@ const ParallaxDrops: React.FC = () => {
             <img src="/img/logo-agrovia.png" alt="Agrovia Logo" className="mid-logo-img" />
           </div>
           <p className="pull-quote">
-            Maximize produtividade,{" "}
-            <span style={{ color: "#7fff6a" }}>minimize desperdício.</span>
+            Conhecimento e contexto,{" "}
+            <span style={{ color: "#7fff6a" }}>a serviço do campo.</span>
           </p>
         </div>
       </div>
 
-      {/* ──── TECH STACK ──── */}
-      <section className="tech" id="tech">
-        <div>
-          <p className="section-tag">Tecnologia</p>
-          <h2 className="section-title">Stack Robusto</h2>
-          <p className="section-body">Implementado com as melhores práticas em eletrônica, engenharia de software e machine learning.</p>
-
-          <ul className="tech-list">
-            <li>
-              <div className="tech-dot"></div>
-              <div>
-                <p>ESP32 IoT Microcontroller</p>
-                <p>Processamento autônomo e conectividade WiFi/BLE</p>
-              </div>
-            </li>
-            <li>
-              <div className="tech-dot"></div>
-              <div>
-                <p>Sensores Capacitivos DHT22</p>
-                <p>Leitura precisa de umidade e temperatura</p>
-              </div>
-            </li>
-            <li>
-              <div className="tech-dot"></div>
-              <div>
-                <p>Cloud Integration (Firebase)</p>
-                <p>Sincronização de dados em tempo real</p>
-              </div>
-            </li>
-            <li>
-              <div className="tech-dot"></div>
-              <div>
-                <p>React Dashboard</p>
-                <p>Interface moderna e responsiva para monitoramento</p>
-              </div>
-            </li>
-          </ul>
+      {/* ──── BENEFITS ──── */}
+      <section className="benefits" id="benefits">
+        <div className="section-heading">
+          <p className="section-tag">Uso consciente</p>
+          <h2 className="section-title">Mais contexto para o manejo</h2>
+          <p className="section-body">A tecnologia pode ajudar a organizar o trabalho e a observar mudanças; os resultados dependem do uso e das condições locais.</p>
         </div>
-        <div className="tech-visual">
-          <div className="esp-board">
-            <div className="esp-label">ESP32</div>
-            <div className="esp-sub">IoT Controller</div>
-          </div>
-          <div className="orbit-item orbit-1">
-            <strong>🌍 WiFi</strong> Conectado
-          </div>
-          <div className="orbit-item orbit-2">
-            <strong>📊 Data</strong> Real-time
-          </div>
-          <div className="orbit-item orbit-3">
-            <strong>💧 Sensor</strong> Umidade
-          </div>
-          <div className="orbit-item orbit-4">
-            <strong>🌡️ Sensor</strong> Temperatura
-          </div>
-          <div className="orbit-item orbit-5">
-            <strong>🚰 Bomba</strong> Acionada
-          </div>
+        <ul className="benefit-list">
+          {benefits.map((benefit) => (
+            <li key={benefit.title}>
+              <span aria-hidden="true">+</span>
+              <div><strong>{benefit.title}</strong><small>{benefit.description}</small></div>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {/* ──── FEATURES ──── */}
+      <section className="features" id="features">
+        <div className="section-heading">
+          <p className="section-tag">Plataforma</p>
+          <h2 className="section-title">Informação agrícola em um só lugar</h2>
+          <p className="section-body">Acesse as áreas disponíveis após entrar. Recursos que ainda dependem de integração são identificados dentro do painel.</p>
+        </div>
+        <div className="feature-grid">
+          {features.map(({ title, description, icon: Icon }) => (
+            <article className="feature-card" key={title}>
+              <span className="feature-icon"><Icon size={21} aria-hidden="true" /></span>
+              <h3>{title}</h3>
+              <p>{description}</p>
+              <button type="button" onClick={() => navigate("/login")}>Acessar após login <span aria-hidden="true">→</span></button>
+            </article>
+          ))}
         </div>
       </section>
 
-      {/* ──── CROPS ──── */}
-      <section className="crops" id="crops">
-        <div style={{ textAlign: "center" }}>
-          <p className="section-tag">Aplicações</p>
-          <h2 className="section-title">Culturas Suportadas</h2>
+      {/* ──── LIBRARY PREVIEW ──── */}
+      <section className="crops" id="library">
+        <div className="section-heading">
+          <p className="section-tag">Conhecimento aplicado</p>
+          <h2 className="section-title">Estudos Agrícolas</h2>
+          <p className="section-body">Materiais de consulta sobre cinco culturas, com conteúdo educativo e referências técnicas para aprofundar cada tema.</p>
         </div>
         <div className="crops-grid">
-          <div className="crop-card">
-            <div
-              className="crop-img"
-              style={{
-                backgroundImage: `url('/img/feijao.jpg')`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat',
-              }}
-            >
-              <div className="crop-badge">LEGUMINOSA</div>
-            </div>
-            <div className="crop-body">
-              <div className="crop-name">Feijão</div>
-              <div className="crop-desc">Cultivo sensível que exige irrigação precisa em períodos críticos de floração.</div>
-              <div className="crop-params">
-                <div className="crop-param">
-                  <div className="crop-param-label">Umidade Ideal</div>
-                  <div className="crop-param-val">60–80%</div>
-                </div>
-                <div className="crop-param">
-                  <div className="crop-param-label">Temp. Ideal</div>
-                  <div className="crop-param-val">18–28°C</div>
-                </div>
+          {cropPreviews.map((crop) => (
+            <article className="crop-card" key={crop.name}>
+              <div className="crop-img">
+                <img src={crop.image} alt={crop.imageAlt} loading="lazy" />
+                <span className="crop-badge">{crop.category}</span>
+                {crop.imageCredit && <small className="crop-photo-credit">{crop.imageCredit}</small>}
               </div>
-            </div>
-          </div>
-
-          <div className="crop-card">
-            <div
-              className="crop-img"
-              style={{
-                backgroundImage: `url('/img/soja.jpg')`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat',
-              }}
-            >
-              <div className="crop-badge">GRÃO</div>
-            </div>
-            <div className="crop-body">
-              <div className="crop-name">Soja</div>
-              <div className="crop-desc">Cultura de alto valor com demanda hídrica estratégica em fases reprodutivas.</div>
-              <div className="crop-params">
-                <div className="crop-param">
-                  <div className="crop-param-label">Umidade Ideal</div>
-                  <div className="crop-param-val">55–75%</div>
-                </div>
-                <div className="crop-param">
-                  <div className="crop-param-label">Temp. Ideal</div>
-                  <div className="crop-param-val">20–30°C</div>
-                </div>
+              <div className="crop-body">
+                <h3 className="crop-name">{crop.name}</h3>
+                <p className="crop-desc">{crop.description}</p>
+                <button type="button" className="crop-study-link" onClick={() => navigate("/login")}>Acessar estudos <span aria-hidden="true">→</span></button>
               </div>
-            </div>
-          </div>
-
-          <div className="crop-card">
-            <div
-              className="crop-img"
-              style={{
-                backgroundImage: `url('/img/milho.jpg')`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat',
-              }}
-            >
-              <div className="crop-badge">GRÃO</div>
-            </div>
-            <div className="crop-body">
-              <div className="crop-name">Milho</div>
-              <div className="crop-desc">Principal cultura brasileira com necessidade crítica de irrigação em pós-floração.</div>
-              <div className="crop-params">
-                <div className="crop-param">
-                  <div className="crop-param-label">Umidade Ideal</div>
-                  <div className="crop-param-val">50–70%</div>
-                </div>
-                <div className="crop-param">
-                  <div className="crop-param-label">Temp. Ideal</div>
-                  <div className="crop-param-val">22–28°C</div>
-                </div>
-              </div>
-            </div>
-          </div>
+            </article>
+          ))}
         </div>
-      </section>
-
-      {/* ──── MISSION ──── */}
-      <section className="mission">
-        <p className="section-tag">Impacto</p>
-        <h2 className="section-title">Tecnologia a serviço do campo</h2>
-        <p className="section-body">
-          A AGROVIA reduz o desperdício de água, corta custos com energia, libera o agricultor de monitoramento manual e
-          prepara o campo brasileiro para o futuro da agricultura de precisão.
-        </p>
       </section>
 
       {/* ──── CTA ──── */}
@@ -414,14 +288,14 @@ const ParallaxDrops: React.FC = () => {
           <img src="/img/logo-agrovia.png" alt="Agrovia Logo" className="cta-logo-img" />
           <span className="cta-brand-name">AGRO<span>VIA</span></span>
         </div>
-        <p className="section-tag">Comece agora</p>
-        <h2 className="section-title">Pronto para irrigar com inteligência?</h2>
+        <p className="section-tag">Agrovia</p>
+        <h2 className="section-title">Acompanhe sua operação com mais contexto</h2>
         <p className="section-body">
-          Solicite uma demonstração gratuita e veja como a AGROVIA transforma a gestão hídrica da sua propriedade.
+          Entre na plataforma para organizar campos, consultar sensores e acessar os estudos agrícolas disponíveis.
         </p>
         <div className="cta-btns">
           <button className="btn-primary" onClick={() => navigate("/login")}>
-            Agendar Demo
+            Acessar plataforma
           </button>
           <button className="btn-outline" onClick={() => window.scrollTo(0, 0)}>
             Voltar ao Topo
@@ -439,8 +313,8 @@ const ParallaxDrops: React.FC = () => {
         <div className="footer-links">
           <a href="#about">Sobre</a>
           <a href="#how">Como Funciona</a>
-          <a href="#tech">Tecnologia</a>
-          <a href="#crops">Culturas</a>
+          <a href="#features">Recursos</a>
+          <a href="#library">Estudos Agrícolas</a>
         </div>
       </footer>
     </div>

@@ -122,3 +122,23 @@
     min-width: 105px;
   }
 }
+
+.account-feedback {
+  padding: 12px 16px;
+  border: 1px solid;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.account-feedback.success {
+  border-color: #bfd8bd;
+  background: #edf5e9;
+  color: #285232;
+}
+
+.account-feedback.error {
+  border-color: #edc5be;
+  background: #fff1ed;
+  color: #7d312a;
+}

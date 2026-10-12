@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { LogOut, Printer } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { AlertCircle, BookOpen, LogOut, Printer, RefreshCw, Sprout, Wifi } from "lucide-react";
 import Sidebar from "./Sidebar";
+import AgriculturalStudies from "./AgriculturalStudies";
 import "../styles/dashboard.css";
 import "../styles/dashboard-mobile.css";
 import "../styles/dashboard-alerts.css";
@@ -12,13 +13,31 @@ import "../styles/dashboard-reporting.css";
 import Sensores from "./Sensores";
 import Campos from "./Campos";
 
-type SensorResumo = {
-  id: string;
-  field: string;
-  humidity: number;
-  temperature: number;
-  reading: string;
+type FazendaResumo = {
+  id: string | number;
+  nome: string;
+  localizacao?: string | null;
+  cultura?: string | null;
 };
+
+type DispositivoResumo = {
+  id: string | number;
+  nome: string;
+  fazenda?: string | null;
+  status?: string;
+  online?: boolean;
+};
+
+type CollectionResult<T> = { records: T[]; demonstracao: boolean };
+
+async function buscarColecao<T>(url: string): Promise<CollectionResult<T>> {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`A solicitação falhou (${response.status}).`);
+  return {
+    records: (await response.json()) as T[],
+    demonstracao: response.headers.get("X-Data-Source") === "demo",
+  };
+}
 
 type ChartMetric = "Umidade do solo" | "Temperatura" | "Precipitação";
 type ChartRange = "Dia" | "Semana" | "7 dias" | "Mês";
@@ -93,26 +112,20 @@ function chartY(value: number, min: number, max: number) {
   return 220 - ((value - min) / (max - min)) * 200;
 }
 
-const sensors: SensorResumo[] = [
-  { id: "S-01", field: "Talhão 1", humidity: 58, temperature: 24, reading: "há 2 min" },
-  { id: "S-02", field: "Talhão 2", humidity: 46, temperature: 25, reading: "há 3 min" },
-  { id: "S-03", field: "Talhão 3", humidity: 27, temperature: 26, reading: "há 1 min" },
-  { id: "S-04", field: "Talhão 4", humidity: 78, temperature: 23, reading: "há 4 min" }
-];
-
-const getStatus = (humidity: number) => {
-  if (humidity < 30) return { label: "Baixo", className: "bad" };
-  if (humidity > 75) return { label: "Alto", className: "warning" };
-  return { label: "Ideal", className: "good" };
-};
-
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const name = localStorage.getItem("usuarioNome") ?? "Usuário";
+  const userId = localStorage.getItem("usuarioId");
   const [dateTime, setDateTime] = useState("");
   const [greeting, setGreeting] = useState("Bom dia");
-  const [humidity, setHumidity] = useState(52);
+  const [fazendas, setFazendas] = useState<FazendaResumo[]>([]);
+  const [dispositivos, setDispositivos] = useState<DispositivoResumo[]>([]);
+  const [carregandoResumo, setCarregandoResumo] = useState(true);
+  const [erroResumo, setErroResumo] = useState("");
+  const [dadosDemonstracao, setDadosDemonstracao] = useState(false);
+  const [atualizadoEm, setAtualizadoEm] = useState<Date | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
   const initials = name.slice(0, 2).toUpperCase();
   const activeNav = location.pathname.endsWith("/sensores")
     ? "Sensores"
@@ -122,11 +135,11 @@ const Dashboard: React.FC = () => {
         ? "Relatórios"
         : location.pathname.endsWith("/alertas")
           ? "Alertas"
+          : location.pathname.startsWith("/painel/estudos")
+            ? "Estudos Agrícolas"
           : "Painel";
-  const averageHumidity = humidity;
   const [activeTab, setActiveTab] = useState<ChartMetric>("Umidade do solo");
   const [range, setRange] = useState<ChartRange>("7 dias");
-  const [mostrarAvisoHistorico, setMostrarAvisoHistorico] = useState(false);
   const metricChart = chartMetrics[activeTab];
   const periodAdjustment = demoRangeAdjustments[range];
   const chartSeries = metricChart.series.map((series) => {
@@ -149,18 +162,6 @@ const Dashboard: React.FC = () => {
   const chartAreaPath = firstSeriesPoints.length
     ? `M${firstSeriesPoints.map((point) => `${point.x},${point.y}`).join(" L")} L620,220 L30,220 Z`
     : "";
-  const reportCards = [
-    { label: "Irrigação otimizada", value: "94%", accent: "good" },
-    { label: "Uso de água", value: "1.280 L", accent: "neutral" },
-    { label: "Eficiência energética", value: "87%", accent: "good" },
-    { label: "Produtividade prevista", value: "+12.4%", accent: "accent" },
-  ];
-  const alertCards = [
-    { title: "Talhão 3", message: "Umidade crítica em 27% — acionamento recomendado.", severity: "Alta" },
-    { title: "Talhão 5", message: "Temperatura acima do limite em 32°C.", severity: "Média" },
-    { title: "Bomba principal", message: "Status operacional estável com consumo normal.", severity: "Baixa" },
-  ];
-
   useEffect(() => {
     const updateClock = () => {
       const now = new Date();
@@ -181,17 +182,34 @@ const Dashboard: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const timer = window.setInterval(
-      () =>
-        setHumidity((value) =>
-          Math.round(
-            Math.max(48, Math.min(56, value + (Math.random() - 0.5) * 1.2))
-          )
-        ),
-      3000
-    );
-    return () => window.clearInterval(timer);
-  }, []);
+    let cancelado = false;
+    setCarregandoResumo(true);
+    setErroResumo("");
+
+    if (!userId) {
+      setErroResumo("Não foi possível identificar a conta autenticada. Saia e entre novamente.");
+      setCarregandoResumo(false);
+      return () => { cancelado = true; };
+    }
+
+    const query = `id_usuario=${encodeURIComponent(userId)}`;
+    Promise.all([
+      buscarColecao<FazendaResumo>(`/api/fazendas?${query}`),
+      buscarColecao<DispositivoResumo>(`/api/dispositivos?${query}`),
+    ]).then(([resultadoFazendas, resultadoDispositivos]) => {
+      if (cancelado) return;
+      setFazendas(resultadoFazendas.records);
+      setDispositivos(resultadoDispositivos.records);
+      setDadosDemonstracao(resultadoFazendas.demonstracao || resultadoDispositivos.demonstracao);
+      setAtualizadoEm(new Date());
+    }).catch(() => {
+      if (!cancelado) setErroResumo("Não foi possível carregar os campos e dispositivos. Verifique a API e tente atualizar.");
+    }).finally(() => {
+      if (!cancelado) setCarregandoResumo(false);
+    });
+
+    return () => { cancelado = true; };
+  }, [userId, refreshKey]);
 
   const logout = () => {
     localStorage.removeItem("usuarioNome");
@@ -207,11 +225,19 @@ const Dashboard: React.FC = () => {
         <header className="dashboard-topbar">
           <div>
             <h1>{greeting}, {name}</h1>
-            <p>
-              Fazenda Santa Rita · {dateTime}
-            </p>
+            <p>Visão geral da operação · {dateTime}</p>
           </div>
           <div className="dashboard-account-actions">
+            <button
+              type="button"
+              className="dashboard-refresh-btn"
+              onClick={() => setRefreshKey((value) => value + 1)}
+              disabled={carregandoResumo}
+              aria-label="Atualizar campos e dispositivos"
+            >
+              <RefreshCw size={15} aria-hidden="true" />
+              <span>{carregandoResumo ? "Atualizando" : "Atualizar"}</span>
+            </button>
             <div className="dashboard-user-chip">
             <span className="dashboard-avatar">{initials}</span>
             <span>{name}</span>
@@ -224,192 +250,82 @@ const Dashboard: React.FC = () => {
         </header>
         {["Painel", "Relatórios", "Alertas"].includes(activeNav) && (
           <div className="dashboard-demo-banner" role="status">
-            <strong>Modo demonstração</strong>
-            <span>Indicadores, alertas e previsões são ilustrativos e não representam leituras conectadas.</span>
+            <strong>{dadosDemonstracao ? "Cadastros demonstrativos" : "Telemetria não integrada"}</strong>
+            <span>
+              {dadosDemonstracao
+                ? "A API retornou registros de demonstração. Gráficos e alertas também são apenas ilustrativos."
+                : "Campos e dispositivos vêm da API; gráficos, leituras do solo e alertas ainda não têm integração de telemetria."}
+            </span>
+            {atualizadoEm && <span>Atualizado às {atualizadoEm.toLocaleTimeString("pt-BR")}</span>}
+          </div>
+        )}
+        {erroResumo && (
+          <div className="dashboard-data-error" role="alert">
+            <AlertCircle size={18} aria-hidden="true" />
+            <span>{erroResumo}</span>
+            <button type="button" onClick={() => setRefreshKey((value) => value + 1)}>Tentar novamente</button>
           </div>
         )}
         {activeNav === "Sensores" ? (
           <Sensores />
         ) : activeNav === "Campos" ? (
           <Campos />
+        ) : activeNav === "Estudos Agrícolas" ? (
+          <AgriculturalStudies />
         ) : activeNav === "Relatórios" ? (
           <section className="dashboard-reports-panel">
-            <div className="dashboard-panel-head reports-head reports-intro">
+            <header className="reports-intro">
+              <p className="section-kicker">Histórico operacional</p>
+              <h2>Relatórios</h2>
+              <p className="report-lead">Os relatórios de desempenho ficam disponíveis quando houver leituras e operações registradas para o período.</p>
+            </header>
+            <div className="dashboard-empty-state">
+              <AlertCircle size={22} aria-hidden="true" />
               <div>
-                <p className="section-kicker">Visão de desempenho</p>
-                <h2>Relatórios de desempenho</h2>
-                <p className="report-lead">
-                  Compare consumo hídrico, eficiência da irrigação e produtividade prevista no período selecionado.
-                </p>
-                <p className="report-meta">Atualizado {dateTime} · Recorte demonstrativo</p>
+                <strong>Não há séries históricas conectadas</strong>
+                <p>A API atual fornece cadastros de campos e dispositivos, mas ainda não fornece leituras, consumo ou eventos de irrigação.</p>
               </div>
-              <button
-                type="button"
-                className="dashboard-secondary-btn report-export-btn"
-                onClick={() => window.print()}
-              >
-                <Printer size={15} aria-hidden="true" />
-                Exportar PDF
-              </button>
-            </div>
-
-            <div className="report-context" aria-label="Contexto do relatório">
-              <div>
-                <span>Período analisado</span>
-                <strong>Últimos 7 dias</strong>
-              </div>
-              <div>
-                <span>Indicadores acompanhados</span>
-                <strong>{reportCards.length} dimensões de desempenho</strong>
-              </div>
-              <div>
-                <span>Escopo do relatório</span>
-                <strong>Água, energia e produtividade</strong>
-              </div>
-            </div>
-
-            <div className="report-grid">
-              {reportCards.map((item) => (
-                <article key={item.label} className="analysis-card">
-                  <span className="analysis-label">{item.label}</span>
-                  <strong className={`analysis-value ${item.accent}`}>{item.value}</strong>
-                </article>
-              ))}
-            </div>
-
-            <div className="report-analytics">
-              <div className="dashboard-panel compact-panel">
-                <div className="dashboard-panel-head mini-head">
-                  <h3>Consumo hídrico</h3>
-                  <span className="status-tag good">Saudável</span>
-                </div>
-                <div className="bars-stack" aria-label="Consumo hídrico semanal">
-                  {[42, 58, 47, 72, 66, 80, 74].map((value, index) => (
-                    <span key={index} style={{ height: `${value}%` }} />
-                  ))}
-                </div>
-              </div>
-
-              <div className="dashboard-panel compact-panel">
-                <div className="dashboard-panel-head mini-head">
-                  <h3>Resumo executivo</h3>
-                </div>
-                <ul className="summary-list">
-                  <li><span>Umidade média do solo</span><strong>52%</strong></li>
-                  <li><span>Área irrigada</span><strong>18 ha</strong></li>
-                  <li><span>Tempo médio de irrigação</span><strong>2h 15min</strong></li>
-                  <li><span>Desperdício estimado</span><strong>6%</strong></li>
-                </ul>
-              </div>
+              <Link to="/painel">Voltar ao painel</Link>
             </div>
           </section>
         ) : activeNav === "Alertas" ? (
           <section className="dashboard-reports-panel">
-            <div className="dashboard-panel-head reports-head alerts-intro">
+            <header className="reports-intro">
+              <p className="section-kicker">Condições para avaliação</p>
+              <h2>Alertas</h2>
+              <p className="report-lead">Alertas responsáveis precisam de leituras recentes, faixas configuradas e regras associadas à cultura.</p>
+            </header>
+            <div className="dashboard-empty-state">
+              <AlertCircle size={22} aria-hidden="true" />
               <div>
-                <p className="section-kicker">Atenção operacional</p>
-                <h2>Central de alertas</h2>
-                <p className="alerts-lead">
-                  Priorize ocorrências por gravidade e consulte as recomendações para cada área monitorada.
-                </p>
+                <strong>Nenhum alerta configurado</strong>
+                <p>Não há telemetria nem regras de alerta disponíveis na API atual. Nenhum campo ou dispositivo foi classificado como crítico.</p>
               </div>
-              <button
-                type="button"
-                className="dashboard-secondary-btn"
-                aria-expanded={mostrarAvisoHistorico}
-                onClick={() => setMostrarAvisoHistorico((visible) => !visible)}
-              >
-                Ver histórico
-              </button>
-            </div>
-
-            {mostrarAvisoHistorico && (
-              <p className="alert-history-note" role="status">
-                O histórico completo ficará disponível após a integração com o banco. Os eventos exibidos são demonstrativos.
-              </p>
-            )}
-
-            <div className="alert-summary" aria-label="Resumo das prioridades">
-              <div>
-                <span>Eventos ativos</span>
-                <strong>{alertCards.length}</strong>
-              </div>
-              <div className="critical">
-                <span>Prioridade alta</span>
-                <strong>{alertCards.filter((item) => item.severity === "Alta").length}</strong>
-              </div>
-              <div className="attention">
-                <span>Prioridade média</span>
-                <strong>{alertCards.filter((item) => item.severity === "Média").length}</strong>
-              </div>
-              <div className="low-priority">
-                <span>Prioridade baixa</span>
-                <strong>{alertCards.filter((item) => item.severity === "Baixa").length}</strong>
-              </div>
-            </div>
-
-            <div className="alert-grid">
-              {alertCards.map((item) => (
-                <article key={item.title} className={`alert-card ${item.severity.toLowerCase()}`}>
-                  <div className="alert-card-top">
-                    <h3>{item.title}</h3>
-                    <span className={`severity-pill ${item.severity.toLowerCase()}`}>{item.severity}</span>
-                  </div>
-                  <p>{item.message}</p>
-                </article>
-              ))}
-            </div>
-
-            <div className="dashboard-panel compact-panel full-width-panel">
-              <div className="dashboard-panel-head mini-head">
-                <h3>Recomendações automáticas</h3>
-              </div>
-              <ul className="recommendation-list">
-                <li>Reduzir irrigação no Talhão 4 em 12% para evitar excedente hídrico.</li>
-                <li>Priorizar inspeção na bomba principal até 18:30, devido a picos de consumo.</li>
-                <li>Programar monitoramento manual do Talhão 3 nas próximas 2 horas.</li>
-              </ul>
+              <Link to="/painel/sensores">Consultar sensores</Link>
             </div>
           </section>
         ) : (
           <>
             <section className="dashboard-kpis" aria-label="Resumo da fazenda">
               <div className="dashboard-kpi">
-                <div className="dashboard-kpi-head">
-                  Umidade média do solo{" "}
-                  <span className="status-tag good">Ideal</span>
-                </div>
-                <div className="dashboard-kpi-value">
-                  {averageHumidity}
-                  <small>%</small>
-                </div>
-                <div className="dashboard-kpi-sub">↑ 4% em relação a ontem</div>
+                <div className="dashboard-kpi-head">Campos cadastrados</div>
+                <div className="dashboard-kpi-value">{carregandoResumo ? "…" : erroResumo ? "—" : fazendas.length}</div>
+                <div className="dashboard-kpi-sub">Contagem retornada pela API</div>
               </div>
               <div className="dashboard-kpi">
-                <div className="dashboard-kpi-head">Temperatura do solo</div>
-                <div className="dashboard-kpi-value">
-                  24<small>°C</small>
-                </div>
-                <div className="dashboard-kpi-sub">Umidade do ar: 55%</div>
+                <div className="dashboard-kpi-head">Dispositivos cadastrados</div>
+                <div className="dashboard-kpi-value">{carregandoResumo ? "…" : erroResumo ? "—" : dispositivos.length}</div>
+                <div className="dashboard-kpi-sub">Sensores e dispositivos não são leituras</div>
               </div>
               <div className="dashboard-kpi">
-                <div className="dashboard-kpi-head">Sensores ativos</div>
-                <div className="dashboard-kpi-value">
-                  18<small>/20</small>
-                </div>
-                <div className="mini-bars">
-                  {[40, 70, 55, 90, 60, 75, 45, 65].map((height, index) => (
-                    <i key={index} style={{ height: `${height}%` }} />
-                  ))}
-                </div>
+                <div className="dashboard-kpi-head">Leituras de umidade</div>
+                <div className="dashboard-kpi-value dashboard-kpi-text">Não integradas</div>
+                <div className="dashboard-kpi-sub">A API ainda não disponibiliza telemetria</div>
               </div>
               <div className="dashboard-kpi">
-                <div className="dashboard-kpi-head">
-                  Alertas ativos{" "}
-                  <span className="status-tag bad">3 talhões</span>
-                </div>
-                <div className="dashboard-kpi-value">3</div>
-                <div className="dashboard-kpi-sub">Umidade abaixo de 30%</div>
+                <div className="dashboard-kpi-head">Alertas de manejo</div>
+                <div className="dashboard-kpi-value dashboard-kpi-text">Não configurados</div>
+                <div className="dashboard-kpi-sub">Sem leituras e regras de alerta integradas</div>
               </div>
             </section>
 
@@ -537,86 +453,60 @@ const Dashboard: React.FC = () => {
                   <table>
                     <thead>
                       <tr>
-                        <th>Sensor</th>
-                        <th>Talhão</th>
-                        <th>Umidade</th>
-                        <th>Temp.</th>
-                        <th>Última leitura</th>
-                        <th>Status</th>
+                        <th>Dispositivo</th>
+                        <th>Fazenda</th>
+                        <th>Conexão</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {sensors.map((sensor) => {
-                        const status = getStatus(sensor.humidity);
+                      {dispositivos.map((dispositivo) => {
+                        const status = dispositivo.status || (dispositivo.online ? "ON" : "OFF");
                         return (
-                          <tr key={sensor.id}>
-                            <td>{sensor.id}</td>
-                            <td>{sensor.field}</td>
-                            <td>{sensor.humidity}%</td>
-                            <td>{sensor.temperature}°C</td>
-                            <td>{sensor.reading}</td>
+                          <tr key={dispositivo.id}>
+                            <td>{dispositivo.nome}</td>
+                            <td>{dispositivo.fazenda || "Não vinculada"}</td>
                             <td>
-                              <span
-                                className={`table-badge ${status.className}`}
-                              >
-                                {status.label}
+                              <span className={`table-badge ${status === "ON" ? "good" : status === "OFF" ? "warning" : ""}`}>
+                                {status === "ON" ? "Conectado" : status === "OFF" ? "Desconectado" : status}
                               </span>
                             </td>
                           </tr>
                         );
                       })}
+                      {!carregandoResumo && dispositivos.length === 0 && (
+                        <tr><td colSpan={3}>{erroResumo ? "Dispositivos indisponíveis no momento." : "Nenhum dispositivo cadastrado."}</td></tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
               </div>
               <aside className="dashboard-panel ranking-panel">
                 <div className="dashboard-panel-head">
-                  <h2>Ranking de talhões</h2>
+                  <h2>Campos cadastrados</h2>
+                  <Sprout size={18} aria-hidden="true" />
                 </div>
-                <div className="ranking-list">
-                  {[81, 64, 58, 45, 26].map((value, index) => (
-                    <div className="ranking-item" key={value}>
-                      <div
-                        className={`rank-number ${index === 0 ? "top" : ""}`}
-                      >
-                        {index + 1}
+                {carregandoResumo ? <p className="dashboard-empty-note">Carregando campos…</p> : fazendas.length ? (
+                  <div className="ranking-list">
+                    {fazendas.map((fazenda) => (
+                      <div className="ranking-item" key={fazenda.id}>
+                        <div className="rank-number"><Sprout size={14} aria-hidden="true" /></div>
+                        <div className="rank-info">
+                          <strong>{fazenda.nome}</strong>
+                          <small>{fazenda.localizacao || "Localização não informada"}</small>
+                        </div>
+                        <div className="rank-value"><strong>{fazenda.cultura || "—"}</strong><small>Cultura</small></div>
                       </div>
-                      <div className="rank-info">
-                        <strong>Talhão {[4, 1, 2, 5, 3][index]}</strong>
-                        <small>{[5, 6, 4, 3, 2][index]} sensores</small>
-                      </div>
-                      <div className="rank-value">
-                        <strong>{value}%</strong>
-                        <small
-                          className={
-                            value < 30
-                              ? "low-text"
-                              : value > 75
-                                ? "high-text"
-                                : "ideal-text"
-                          }
-                        >
-                          {value < 30 ? "Baixo" : value > 75 ? "Alto" : "Ideal"}
-                        </small>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : <p className="dashboard-empty-note">{erroResumo ? "Campos indisponíveis." : "Nenhum campo cadastrado. Comece cadastrando uma propriedade."}</p>}
                 <div className="weather-heading">
-                  <h2>Previsão do tempo</h2>
+                  <h2>Ações rápidas</h2>
                 </div>
-                <div className="weather-row">
-                  {[
-                    ["Hoje", "26°"],
-                    ["Qui", "24°"],
-                    ["Sex", "22°"],
-                    ["Sáb", "23°"]
-                  ].map(([day, temperature]) => (
-                    <div key={day}>
-                      <span>{day}</span>
-                      <strong>{temperature}</strong>
-                    </div>
-                  ))}
+                <div className="dashboard-quick-links">
+                  <Link to="/painel/campos"><Sprout size={15} />Campos</Link>
+                  <Link to="/painel/sensores"><Wifi size={15} />Sensores</Link>
+                  <Link to="/painel/relatorios"><Printer size={15} />Relatórios</Link>
+                  <Link to="/painel/estudos"><BookOpen size={15} />Estudos Agrícolas</Link>
                 </div>
               </aside>
             </section>

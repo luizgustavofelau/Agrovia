@@ -12,6 +12,7 @@ console.log('Variáveis carregadas:', {
 const express = require('express');
 const cors = require('cors');
 const { pool } = require('./db');
+const { inspectSchema } = require('./schema-check');
 
 const app = express();
 app.use(cors());
@@ -49,10 +50,28 @@ const verificarBancoDisponivel = async () => {
     await pool.query('SELECT 1 AS ok');
     return true;
   } catch (error) {
-    console.warn('[DB] Banco indisponível — usando fallback:', error.message);
+    console.warn('[DB] Banco indisponível — usando fallback:', error.message || error.code || 'Erro sem mensagem fornecida pelo driver.');
     return false;
   }
 };
+
+app.get('/api/health', async (_req, res) => {
+  try {
+    await pool.query('SELECT 1 AS ok');
+  } catch (_error) {
+    return res.status(503).json({ api: 'ok', database: 'unavailable', schema: 'unknown' });
+  }
+
+  try {
+    const schema = await inspectSchema(pool);
+    if (!schema.ready) {
+      return res.status(503).json({ api: 'ok', database: 'connected', schema: 'incomplete', missingColumns: schema.missingColumns });
+    }
+    return res.json({ api: 'ok', database: 'connected', schema: 'ready' });
+  } catch (_error) {
+    return res.status(503).json({ api: 'ok', database: 'connected', schema: 'unknown' });
+  }
+});
 
 const normalizarEmail = (valor = '') => String(valor).trim().toLowerCase();
 
@@ -74,6 +93,7 @@ const contaError = (res, error) => {
 
 app.get('/api/usuario/:id', async (req, res) => {
   if (!(await verificarBancoDisponivel())) {
+    res.setHeader('X-Data-Source', 'demo');
     const usuario = FALLBACK_USUARIOS.find((item) => String(item.id_usuario) === String(req.params.id));
     if (!usuario) return res.status(404).json({ mensagem: 'Usuário não encontrado.' });
     return res.json({ id_usuario: usuario.id_usuario, nome: usuario.nome, email: usuario.email, telefone: usuario.telefone, tipo_usuario: usuario.tipo_usuario });
@@ -91,6 +111,7 @@ app.put('/api/usuario/:id', async (req, res) => {
   if (!nome || !email) return res.status(400).json({ mensagem: 'Nome e e-mail são obrigatórios.' });
 
   if (!(await verificarBancoDisponivel())) {
+    res.setHeader('X-Data-Source', 'demo');
     const usuarioAtual = FALLBACK_USUARIOS.find((item) => String(item.id_usuario) === String(req.params.id));
     if (!usuarioAtual) return res.status(404).json({ mensagem: 'Usuário não encontrado.' });
     const usuarioAtualizado = {
@@ -117,11 +138,13 @@ app.get('/api/fazendas', async (req, res) => {
   if (!id_usuario) return res.status(400).json({ mensagem: 'id_usuario é obrigatório.' });
 
   if (!(await verificarBancoDisponivel())) {
+    res.setHeader('X-Data-Source', 'demo');
     return res.json(FALLBACK_FAZENDAS);
   }
 
   try {
     const [rows] = await pool.execute(`SELECT f.id_fazenda AS id, f.nome_fazenda AS nome, f.localizacao,
+      f.area_ha AS areaHa, f.qtd_talhoes AS talhoes, f.observacoes,
       f.id_cultura_fk, c.nome_cultura AS cultura
       FROM FAZENDAS f LEFT JOIN CULTURAS c ON c.id_cultura = f.id_cultura_fk
       WHERE f.id_usuario_fk = ? ORDER BY f.nome_fazenda`, [id_usuario]);
@@ -130,29 +153,58 @@ app.get('/api/fazendas', async (req, res) => {
 });
 
 app.post('/api/fazendas', async (req, res) => {
-  const { nome_fazenda, localizacao, id_usuario, id_cultura } = req.body;
+  const { nome_fazenda, localizacao, id_usuario, id_cultura, cultura, area_ha, qtd_talhoes, observacoes } = req.body;
   if (!nome_fazenda || !id_usuario) return res.status(400).json({ mensagem: 'nome_fazenda e id_usuario são obrigatórios.' });
 
+  const area = area_ha === undefined || area_ha === null || area_ha === '' ? null : Number(area_ha);
+  const talhoes = qtd_talhoes === undefined || qtd_talhoes === null || qtd_talhoes === '' ? null : Number(qtd_talhoes);
+  const notas = observacoes == null || observacoes === '' ? null : String(observacoes).trim();
+  if (area !== null && (!Number.isFinite(area) || area <= 0)) return res.status(400).json({ mensagem: 'A área deve ser um número maior que zero.' });
+  if (talhoes !== null && (!Number.isInteger(talhoes) || talhoes < 1)) return res.status(400).json({ mensagem: 'A quantidade de talhões deve ser um inteiro maior que zero.' });
+  if (notas && notas.length > 300) return res.status(400).json({ mensagem: 'As observações devem ter no máximo 300 caracteres.' });
+
   if (!(await verificarBancoDisponivel())) {
+    const culturaFallback = id_cultura
+      ? FALLBACK_CULTURAS.find((item) => String(item.id) === String(id_cultura))?.nome || `Cultura ${id_cultura}`
+      : FALLBACK_CULTURAS.find((item) => item.nome.toLowerCase() === String(cultura || '').trim().toLowerCase())?.nome || cultura || 'Sem cultura definida';
     const novaFazenda = {
       id: FALLBACK_FAZENDAS.length + 1,
       nome: nome_fazenda.trim(),
       localizacao: localizacao || 'Localização não informada',
-      cultura: id_cultura ? `Cultura ${id_cultura}` : 'Sem cultura definida',
+      cultura: culturaFallback,
+      areaHa: area,
+      talhoes,
+      observacoes: notas,
     };
     FALLBACK_FAZENDAS.push(novaFazenda);
+    res.setHeader('X-Data-Source', 'demo');
     return res.status(201).json(novaFazenda);
   }
 
   try {
-    const [result] = await pool.execute('INSERT INTO FAZENDAS (nome_fazenda, localizacao, id_usuario_fk, id_cultura_fk) VALUES (?, ?, ?, ?)', [nome_fazenda.trim(), localizacao || null, id_usuario, id_cultura || null]);
-    const [rows] = await pool.execute('SELECT id_fazenda AS id, nome_fazenda AS nome, localizacao, id_cultura_fk FROM FAZENDAS WHERE id_fazenda = ?', [result.insertId]);
+    let culturaId = id_cultura || null;
+    if (!culturaId && cultura) {
+      const [culturas] = await pool.execute('SELECT id_cultura FROM CULTURAS WHERE LOWER(nome_cultura) = ?', [String(cultura).trim().toLowerCase()]);
+      if (!culturas.length) return res.status(400).json({ mensagem: 'A cultura informada não está cadastrada.' });
+      culturaId = culturas[0].id_cultura;
+    }
+    const [result] = await pool.execute(`INSERT INTO FAZENDAS
+      (nome_fazenda, localizacao, id_usuario_fk, id_cultura_fk, area_ha, qtd_talhoes, observacoes)
+      VALUES (?, ?, ?, ?, ?, ?, ?)`, [nome_fazenda.trim(), localizacao || null, id_usuario, culturaId, area, talhoes, notas]);
+    const [rows] = await pool.execute(`SELECT f.id_fazenda AS id, f.nome_fazenda AS nome, f.localizacao,
+      f.area_ha AS areaHa, f.qtd_talhoes AS talhoes, f.observacoes,
+      f.id_cultura_fk, c.nome_cultura AS cultura
+      FROM FAZENDAS f LEFT JOIN CULTURAS c ON c.id_cultura = f.id_cultura_fk
+      WHERE f.id_fazenda = ?`, [result.insertId]);
     return res.status(201).json(rows[0]);
   } catch (error) { return contaError(res, error); }
 });
 
 app.get('/api/culturas', async (_req, res) => {
-  if (!(await verificarBancoDisponivel())) return res.json(FALLBACK_CULTURAS);
+  if (!(await verificarBancoDisponivel())) {
+    res.setHeader('X-Data-Source', 'demo');
+    return res.json(FALLBACK_CULTURAS);
+  }
 
   try {
     const [rows] = await pool.execute(`SELECT id_cultura AS id, nome_cultura AS nome, descricao_tecnica AS descricao,
@@ -167,6 +219,7 @@ app.post('/api/culturas', async (req, res) => {
   if (Number(umidade_minima) > Number(umidade_maxima)) return res.status(400).json({ mensagem: 'A umidade mínima não pode ser maior que a máxima.' });
 
   if (!(await verificarBancoDisponivel())) {
+    res.setHeader('X-Data-Source', 'demo');
     const novaCultura = {
       id: FALLBACK_CULTURAS.length + 1,
       nome: nome_cultura.trim(),
@@ -190,6 +243,7 @@ app.get('/api/dispositivos', async (req, res) => {
   if (!id_usuario) return res.status(400).json({ mensagem: 'id_usuario é obrigatório.' });
 
   if (!(await verificarBancoDisponivel())) {
+    res.setHeader('X-Data-Source', 'demo');
     return res.json(FALLBACK_DISPOSITIVOS.map((item) => ({ ...item, talhaoVinculado: item.fazenda, status: item.online ? 'ON' : 'OFF' })));
   }
 
@@ -207,6 +261,7 @@ app.post('/api/dispositivos', async (req, res) => {
   if (!nome_dispositivo || !mac_address || !id_fazenda || id_campo === undefined || id_campo === '') return res.status(400).json({ mensagem: 'Nome, MAC, fazenda e campo são obrigatórios.' });
 
   if (!(await verificarBancoDisponivel())) {
+    res.setHeader('X-Data-Source', 'demo');
     const novoDispositivo = {
       id: FALLBACK_DISPOSITIVOS.length + 1,
       nome: nome_dispositivo.trim(),
@@ -255,19 +310,6 @@ app.post('/api/login', async (req, res) => {
       });
     }
     return res.status(401).json({ sucesso: false, mensagem: 'E-mail ou senha inválidos.' });
-  }
-
-  if (usuarioFallback) {
-    return res.json({
-      sucesso: true,
-      usuario: {
-        id: usuarioFallback.id_usuario,
-        nome: usuarioFallback.nome,
-        email: usuarioFallback.email,
-        telefone: usuarioFallback.telefone,
-        tipo: usuarioFallback.tipo_usuario,
-      },
-    });
   }
 
   try {
