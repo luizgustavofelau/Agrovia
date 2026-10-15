@@ -18,6 +18,8 @@ export type CropStudy = {
   level: string;
   summary: string;
   image?: string;
+  imageAlt?: string;
+  imageCredit?: string;
   tags: string[];
   chapters: StudyChapter[];
   references: { title: string; institution: string; url: string }[];
@@ -208,6 +210,9 @@ export const cropStudies: CropStudy[] = [
     name: "Cana-de-açúcar",
     category: "Gramínea perene", level: "Fundamentos e manejo",
     summary: "Um guia introdutório sobre canaviais, ciclo de corte e rebrota, ambiente, conservação do solo e decisões de água em sistemas diversos.",
+    image: "/img/cana-de-acucar.jpg",
+    imageAlt: "Colheita em um canavial",
+    imageCredit: "Foto: proudlyswazi / Unsplash",
     tags: ["gramínea", "perene", "perfilhamento", "soqueira", "irrigação", "solo", "cana-planta"],
     chapters: [
       {
@@ -292,6 +297,9 @@ export const cropStudies: CropStudy[] = [
     name: "Café",
     category: "Cultura perene", level: "Fundamentos e manejo",
     summary: "Explore diferenças entre espécies e ambientes, fenologia, solo, água e monitoramento em cafezais de distintas regiões e sistemas.",
+    image: "/img/cafe.jpg",
+    imageAlt: "Cerejas amarelas de café arábica em um ramo",
+    imageCredit: "Foto: 1500mcoffee / Pexels",
     tags: ["cafeicultura", "cafeeiro", "arábica", "conilon", "perene", "irrigação", "fenologia"],
     chapters: [
       {

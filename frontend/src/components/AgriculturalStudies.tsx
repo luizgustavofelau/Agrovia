@@ -233,9 +233,15 @@ export default function AgriculturalStudies() {
           const resumeChapter = savedProgress?.current || 0;
           return (
             <article className="study-card" key={item.slug}>
-              <div className={`study-card-image ${item.image ? "has-image" : "study-card-no-image"}`} style={item.image ? { backgroundImage: `url('${item.image}')` } : undefined}>
+              <div
+                className={`study-card-image ${item.image ? "has-image" : "study-card-no-image"}`}
+                style={item.image ? { backgroundImage: `url('${item.image}')` } : undefined}
+                role={item.image ? "img" : undefined}
+                aria-label={item.image ? item.imageAlt || `Plantação de ${item.name}` : undefined}
+              >
                 <span>{item.category}</span>
                 {!item.image && <Sprout size={32} aria-hidden="true" />}
+                {item.imageCredit && <small className="study-card-image-credit">{item.imageCredit}</small>}
               </div>
               <div className="study-card-content">
                 <div className="study-card-level">{item.level} <span>·</span> {item.chapters.length} capítulos</div>
