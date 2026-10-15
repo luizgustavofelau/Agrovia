@@ -1,64 +1,14 @@
 import { useEffect, useState } from "react";
-import { Plus, MapPin, Ruler, LayoutGrid, Sprout } from "lucide-react";
+import { Plus } from "lucide-react";
 import CampoModal from "./CampoModal";
+import CampoCard, { type Campo } from "./CampoCard";
+import { ConfirmDeleteDialog } from "./ConfirmDeleteDialog";
+import { excluirFazenda } from "../services/campos.api";
 import "../styles/fields.css";
 
 const API_URL = "/api/fazendas";
-
-type Campo = {
-  id: string | number;
-  nome: string;
-  localizacao?: string | null;
-  areaHa?: number | null;
-  cultura?: string | null;
-  talhoes?: number | null;
-  observacoes?: string | null;
-};
-
 const formatarHa = (valor?: number | null) =>
   valor == null ? "Não informado" : `${Number(valor).toLocaleString("pt-BR", { maximumFractionDigits: 2 })} ha`;
-
-function CampoCard({ campo }: { campo: Campo }) {
-  return (
-    <article className="field-card flex min-h-[280px] flex-col rounded-3xl bg-white p-6 shadow-sm ring-1 ring-black/5">
-      <div className="flex items-start justify-between gap-3">
-        <h3 className="text-lg font-semibold leading-tight text-stone-900">{campo.nome}</h3>
-        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[#1f3a2b]/10 px-3 py-1 text-xs font-medium text-[#1f3a2b]">
-          <Sprout size={13} />
-          {campo.cultura || "Cultura não informada"}
-        </span>
-      </div>
-
-      <p className="mt-2 flex items-center gap-1.5 text-sm text-stone-500">
-        <MapPin size={15} className="shrink-0 text-stone-400" />
-        {campo.localizacao || "Localização não informada"}
-      </p>
-
-      <dl className="field-metrics mt-5 grid grid-cols-2 gap-3">
-        <div className="rounded-2xl bg-[#f4f1ea] px-4 py-3">
-          <dt className="flex items-center gap-1.5 text-xs text-stone-500">
-            <Ruler size={13} />
-            Área total
-          </dt>
-          <dd className="mt-1 text-sm font-semibold text-[#1f3a2b]">{formatarHa(campo.areaHa)}</dd>
-        </div>
-        <div className="rounded-2xl bg-[#f4f1ea] px-4 py-3">
-          <dt className="flex items-center gap-1.5 text-xs text-stone-500">
-            <LayoutGrid size={13} />
-            Talhões
-          </dt>
-          <dd className="mt-1 text-xl font-semibold text-[#1f3a2b]">{campo.talhoes ?? "Não informado"}</dd>
-        </div>
-      </dl>
-
-      {campo.observacoes && (
-        <p className="field-note mt-auto line-clamp-2 border-t border-[#efeadc] pt-4 text-sm text-stone-600">
-          {campo.observacoes}
-        </p>
-      )}
-    </article>
-  );
-}
 
 function CardAdicionar({ onClick }: { onClick: () => void }) {
   return (
@@ -80,6 +30,9 @@ export default function Campos() {
   const [campos, setCampos] = useState<Campo[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [modalAberto, setModalAberto] = useState(false);
+  const [alvoExclusao, setAlvoExclusao] = useState<Campo | null>(null);
+  const [excluindo, setExcluindo] = useState(false);
+  const [erroExclusao, setErroExclusao] = useState("");
   const [aviso, setAviso] = useState("");
   const [erro, setErro] = useState("");
   const [dadosDemonstracao, setDadosDemonstracao] = useState(false);
@@ -149,6 +102,29 @@ export default function Campos() {
     }
   }
 
+  async function confirmarExclusao() {
+    if (!alvoExclusao) return;
+    const accessToken = localStorage.getItem("accessToken");
+    if (!accessToken) {
+      setErroExclusao("Sua sessão expirou. Entre novamente para excluir a propriedade.");
+      return;
+    }
+
+    setExcluindo(true);
+    setErroExclusao("");
+    try {
+      await excluirFazenda(alvoExclusao.id, accessToken);
+      setCampos((atuais) => atuais.filter((campo) => campo.id !== alvoExclusao.id));
+      setAviso(`Propriedade “${alvoExclusao.nome}” excluída com sucesso.`);
+      setErro("");
+      setAlvoExclusao(null);
+    } catch (error) {
+      setErroExclusao(error instanceof Error ? error.message : "Não foi possível excluir a propriedade.");
+    } finally {
+      setExcluindo(false);
+    }
+  }
+
   return (
     <div className="field-page min-h-full bg-[#f4f1ea] p-6 text-stone-800 sm:p-10">
       <header className="field-page-header mb-8">
@@ -186,7 +162,10 @@ export default function Campos() {
           )}
           <div className="field-grid grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
             {campos.map((c) => (
-              <CampoCard key={c.id} campo={c} />
+              <CampoCard key={c.id} campo={c} onSolicitarExclusao={(campo) => {
+                setErroExclusao("");
+                setAlvoExclusao(campo);
+              }} />
             ))}
             <CardAdicionar onClick={() => setModalAberto(true)} />
           </div>
@@ -194,6 +173,14 @@ export default function Campos() {
       )}
 
       <CampoModal aberto={modalAberto} onFechar={() => setModalAberto(false)} onSalvar={salvarCampo} />
+      <ConfirmDeleteDialog
+        open={alvoExclusao !== null}
+        nomeFazenda={alvoExclusao?.nome ?? ""}
+        loading={excluindo}
+        error={erroExclusao}
+        onCancel={() => setAlvoExclusao(null)}
+        onConfirm={confirmarExclusao}
+      />
     </div>
   );
 }

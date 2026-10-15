@@ -57,6 +57,7 @@ DB_PASS=sua_senha
 DB_NAME=agrovia
 DB_PORT=3306
 PORT=5000
+# AUTH_TOKEN_SECRET=configure-um-segredo-aleatorio-forte-em-producao
 ```
 
 Não envie `backend/.env` ao Git e não compartilhe credenciais. A aplicação não cria usuários administrativos automaticamente; provisionar uma conta inicial deve seguir o procedimento de segurança do ambiente.
@@ -79,6 +80,8 @@ Para conferir a ordem/segmentação sem conectar nem executar SQL, use `npm run 
 Para uma base já existente, faça backup antes, confira o nome do banco e revise `SHOW CREATE TABLE` nas tabelas atuais. As migrações não apagam dados, mas `CREATE TABLE IF NOT EXISTS` não corrige tipos/índices de tabelas antigas. O diagnóstico informa colunas requeridas que ainda faltam; resolva divergências antes de usar a aplicação.
 
 O endpoint `GET http://localhost:5000/api/health` retorna se a API está ativa, se o banco conectou e se o schema tem as colunas esperadas. `npm run test-db` faz a mesma verificação pelo terminal.
+
+A migração `003_soft_delete_fazendas.sql` adiciona `FAZENDAS.deleted_at`; `004_soft_delete_dispositivos.sql` adiciona exclusão lógica de dispositivos e um índice que permite reutilizar um MAC somente depois que o registro anterior for removido. Execute `npm run db:migrate` após atualizar o projeto. Fazendas e dispositivos removidos deixam de aparecer nas listagens, mas não são apagados imediatamente do banco. Remover um dispositivo também marca seu status como desconectado; a aplicação ainda não possui ingestão nem histórico de telemetria. O login emite um token com validade de 8 horas para autorizar exclusões. Defina `AUTH_TOKEN_SECRET` com um valor aleatório forte no ambiente; se omitido, a API usa um segredo temporário e invalida as sessões ao reiniciar.
 
 ### 5) Iniciar backend e frontend
 

@@ -5,10 +5,11 @@ const REQUIRED_COLUMNS = [
   'CULTURAS.umidade_ideal_min', 'CULTURAS.umidade_ideal_max',
   'FAZENDAS.id_fazenda', 'FAZENDAS.nome_fazenda', 'FAZENDAS.localizacao',
   'FAZENDAS.id_usuario_fk', 'FAZENDAS.id_cultura_fk', 'FAZENDAS.area_ha',
-  'FAZENDAS.qtd_talhoes', 'FAZENDAS.observacoes',
+  'FAZENDAS.qtd_talhoes', 'FAZENDAS.observacoes', 'FAZENDAS.deleted_at',
   'DISPOSITIVOS.id_dispositivo', 'DISPOSITIVOS.nome_dispositivo',
   'DISPOSITIVOS.mac_address', 'DISPOSITIVOS.status_conexao',
   'DISPOSITIVOS.id_fazenda_fk', 'DISPOSITIVOS.id_campo',
+  'DISPOSITIVOS.deleted_at', 'DISPOSITIVOS.mac_address_ativo',
 ];
 
 async function inspectSchema(pool) {

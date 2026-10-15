@@ -22,7 +22,8 @@ const Login: React.FC = () => {
       });
       if (response.ok) {
         const data = await response.json();
-        console.log('[LOGIN] Sucesso:', data);
+        console.info('[LOGIN] Acesso autorizado.');
+        localStorage.setItem('accessToken', data.accessToken);
         localStorage.setItem('usuarioId', String(data.usuario.id));
         localStorage.setItem('usuarioNome', data.usuario.nome);
         localStorage.setItem('usuarioLogado', JSON.stringify(data.usuario));

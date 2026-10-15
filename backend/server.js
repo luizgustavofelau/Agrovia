@@ -11,6 +11,7 @@ console.log('Variáveis carregadas:', {
 
 const express = require('express');
 const cors = require('cors');
+const crypto = require('crypto');
 const { pool } = require('./db');
 const { inspectSchema } = require('./schema-check');
 
@@ -30,8 +31,8 @@ const FALLBACK_USUARIOS = [
 ];
 
 const FALLBACK_FAZENDAS = [
-  { id: 1, nome: 'Fazenda Vale Verde', localizacao: 'São José do Rio Preto - SP', cultura: 'Soja' },
-  { id: 2, nome: 'Lote Estrela', localizacao: 'Bauru - SP', cultura: 'Milho' },
+  { id: 1, id_usuario: 1, nome: 'Fazenda Vale Verde', localizacao: 'São José do Rio Preto - SP', cultura: 'Soja' },
+  { id: 2, id_usuario: 1, nome: 'Lote Estrela', localizacao: 'Bauru - SP', cultura: 'Milho' },
 ];
 
 const FALLBACK_CULTURAS = [
@@ -41,9 +42,46 @@ const FALLBACK_CULTURAS = [
 ];
 
 const FALLBACK_DISPOSITIVOS = [
-  { id: 1, nome: 'ESP32-01', mac: 'A0:B7:65:12:33:AA', online: true, id_fazenda: 1, id_campo: 1, fazenda: 'Fazenda Vale Verde' },
-  { id: 2, nome: 'ESP32-02', mac: 'A0:B7:65:12:33:BB', online: false, id_fazenda: 2, id_campo: 2, fazenda: 'Lote Estrela' },
+  { id: 1, id_usuario: 1, nome: 'ESP32-01', mac: 'A0:B7:65:12:33:AA', online: true, id_fazenda: 1, id_campo: 1, fazenda: 'Fazenda Vale Verde' },
+  { id: 2, id_usuario: 1, nome: 'ESP32-02', mac: 'A0:B7:65:12:33:BB', online: false, id_fazenda: 2, id_campo: 2, fazenda: 'Lote Estrela' },
 ];
+
+const SESSION_SECRET = process.env.AUTH_TOKEN_SECRET || crypto.randomBytes(32).toString('hex');
+if (!process.env.AUTH_TOKEN_SECRET) {
+  console.warn('[AUTH] AUTH_TOKEN_SECRET não definido; sessões serão invalidadas quando o servidor reiniciar.');
+}
+
+const criarTokenSessao = (idUsuario) => {
+  const payload = Buffer.from(JSON.stringify({
+    sub: Number(idUsuario),
+    exp: Math.floor(Date.now() / 1000) + (8 * 60 * 60),
+  })).toString('base64url');
+  const assinatura = crypto.createHmac('sha256', SESSION_SECRET).update(payload).digest('base64url');
+  return `${payload}.${assinatura}`;
+};
+
+const verificarTokenSessao = (req, res, next) => {
+  const token = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+  const [payload, assinatura] = token.split('.');
+  if (!payload || !assinatura) return res.status(401).json({ mensagem: 'Sessão inválida ou expirada.' });
+
+  const assinaturaEsperada = crypto.createHmac('sha256', SESSION_SECRET).update(payload).digest();
+  let assinaturaRecebida;
+  let conteudo;
+  try {
+    assinaturaRecebida = Buffer.from(assinatura, 'base64url');
+    conteudo = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+  } catch (_error) {
+    return res.status(401).json({ mensagem: 'Sessão inválida ou expirada.' });
+  }
+  if (assinaturaRecebida.length !== assinaturaEsperada.length || !crypto.timingSafeEqual(assinaturaRecebida, assinaturaEsperada)
+    || !Number.isInteger(conteudo.sub) || conteudo.sub < 1 || !Number.isInteger(conteudo.exp) || conteudo.exp <= Date.now() / 1000) {
+    return res.status(401).json({ mensagem: 'Sessão inválida ou expirada.' });
+  }
+
+  req.usuarioAutenticado = conteudo.sub;
+  return next();
+};
 
 const verificarBancoDisponivel = async () => {
   try {
@@ -139,7 +177,9 @@ app.get('/api/fazendas', async (req, res) => {
 
   if (!(await verificarBancoDisponivel())) {
     res.setHeader('X-Data-Source', 'demo');
-    return res.json(FALLBACK_FAZENDAS);
+    return res.json(FALLBACK_FAZENDAS
+      .filter((fazenda) => String(fazenda.id_usuario) === String(id_usuario))
+      .map(({ id_usuario: _idUsuario, ...fazenda }) => fazenda));
   }
 
   try {
@@ -147,7 +187,7 @@ app.get('/api/fazendas', async (req, res) => {
       f.area_ha AS areaHa, f.qtd_talhoes AS talhoes, f.observacoes,
       f.id_cultura_fk, c.nome_cultura AS cultura
       FROM FAZENDAS f LEFT JOIN CULTURAS c ON c.id_cultura = f.id_cultura_fk
-      WHERE f.id_usuario_fk = ? ORDER BY f.nome_fazenda`, [id_usuario]);
+      WHERE f.id_usuario_fk = ? AND f.deleted_at IS NULL ORDER BY f.nome_fazenda`, [id_usuario]);
     return res.json(rows);
   } catch (error) { return contaError(res, error); }
 });
@@ -168,7 +208,8 @@ app.post('/api/fazendas', async (req, res) => {
       ? FALLBACK_CULTURAS.find((item) => String(item.id) === String(id_cultura))?.nome || `Cultura ${id_cultura}`
       : FALLBACK_CULTURAS.find((item) => item.nome.toLowerCase() === String(cultura || '').trim().toLowerCase())?.nome || cultura || 'Sem cultura definida';
     const novaFazenda = {
-      id: FALLBACK_FAZENDAS.length + 1,
+      id: FALLBACK_FAZENDAS.reduce((maiorId, fazenda) => Math.max(maiorId, Number(fazenda.id) || 0), 0) + 1,
+      id_usuario: Number(id_usuario),
       nome: nome_fazenda.trim(),
       localizacao: localizacao || 'Localização não informada',
       cultura: culturaFallback,
@@ -178,7 +219,8 @@ app.post('/api/fazendas', async (req, res) => {
     };
     FALLBACK_FAZENDAS.push(novaFazenda);
     res.setHeader('X-Data-Source', 'demo');
-    return res.status(201).json(novaFazenda);
+    const { id_usuario: _idUsuario, ...fazendaPublica } = novaFazenda;
+    return res.status(201).json(fazendaPublica);
   }
 
   try {
@@ -198,6 +240,52 @@ app.post('/api/fazendas', async (req, res) => {
       WHERE f.id_fazenda = ?`, [result.insertId]);
     return res.status(201).json(rows[0]);
   } catch (error) { return contaError(res, error); }
+});
+
+app.delete('/api/fazendas/:id', verificarTokenSessao, async (req, res) => {
+  const idFazenda = String(req.params.id);
+  if (!/^\d+$/.test(idFazenda) || Number(idFazenda) < 1) {
+    return res.status(400).json({ mensagem: 'Identificador de fazenda inválido.' });
+  }
+
+  if (!(await verificarBancoDisponivel())) {
+    const index = FALLBACK_FAZENDAS.findIndex((fazenda) =>
+      String(fazenda.id) === idFazenda && fazenda.id_usuario === req.usuarioAutenticado,
+    );
+    if (index < 0) return res.status(404).json({ mensagem: 'Propriedade não encontrada.' });
+    FALLBACK_FAZENDAS.splice(index, 1);
+    for (let dispositivo = FALLBACK_DISPOSITIVOS.length - 1; dispositivo >= 0; dispositivo -= 1) {
+      if (String(FALLBACK_DISPOSITIVOS[dispositivo].id_fazenda) === idFazenda) FALLBACK_DISPOSITIVOS.splice(dispositivo, 1);
+    }
+    res.setHeader('X-Data-Source', 'demo');
+    return res.status(204).end();
+  }
+
+  let connection;
+  try {
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+    const [fazendas] = await connection.execute(
+      'SELECT id_fazenda FROM FAZENDAS WHERE id_fazenda = ? AND id_usuario_fk = ? AND deleted_at IS NULL FOR UPDATE',
+      [idFazenda, req.usuarioAutenticado],
+    );
+    if (!fazendas.length) {
+      await connection.rollback();
+      return res.status(404).json({ mensagem: 'Propriedade não encontrada.' });
+    }
+
+    await connection.execute(
+      'UPDATE FAZENDAS SET deleted_at = CURRENT_TIMESTAMP WHERE id_fazenda = ? AND id_usuario_fk = ? AND deleted_at IS NULL',
+      [idFazenda, req.usuarioAutenticado],
+    );
+    await connection.commit();
+    return res.status(204).end();
+  } catch (error) {
+    if (connection) await connection.rollback().catch(() => {});
+    return contaError(res, error);
+  } finally {
+    if (connection) connection.release();
+  }
 });
 
 app.get('/api/culturas', async (_req, res) => {
@@ -244,14 +332,16 @@ app.get('/api/dispositivos', async (req, res) => {
 
   if (!(await verificarBancoDisponivel())) {
     res.setHeader('X-Data-Source', 'demo');
-    return res.json(FALLBACK_DISPOSITIVOS.map((item) => ({ ...item, talhaoVinculado: item.fazenda, status: item.online ? 'ON' : 'OFF' })));
+    return res.json(FALLBACK_DISPOSITIVOS
+      .filter((item) => String(item.id_usuario) === String(id_usuario) && !item.deleted_at)
+      .map(({ id_usuario: _idUsuario, ...item }) => ({ ...item, talhaoVinculado: item.fazenda, status: item.online ? 'ON' : 'OFF' })));
   }
 
   try {
     const [rows] = await pool.execute(`SELECT d.id_dispositivo AS id, d.nome_dispositivo AS nome, d.mac_address AS mac,
       d.status_conexao AS status, d.id_fazenda_fk AS id_fazenda, d.id_campo, f.nome_fazenda AS fazenda
       FROM DISPOSITIVOS d INNER JOIN FAZENDAS f ON f.id_fazenda = d.id_fazenda_fk
-      WHERE f.id_usuario_fk = ? ORDER BY d.nome_dispositivo`, [id_usuario]);
+      WHERE f.id_usuario_fk = ? AND f.deleted_at IS NULL AND d.deleted_at IS NULL ORDER BY d.nome_dispositivo`, [id_usuario]);
     return res.json(rows.map(row => ({ ...row, online: row.status === 'ON', talhaoVinculado: row.fazenda })));
   } catch (error) { return contaError(res, error); }
 });
@@ -261,9 +351,12 @@ app.post('/api/dispositivos', async (req, res) => {
   if (!nome_dispositivo || !mac_address || !id_fazenda || id_campo === undefined || id_campo === '') return res.status(400).json({ mensagem: 'Nome, MAC, fazenda e campo são obrigatórios.' });
 
   if (!(await verificarBancoDisponivel())) {
+    const fazenda = FALLBACK_FAZENDAS.find((item) => String(item.id) === String(id_fazenda));
+    if (!fazenda) return res.status(404).json({ mensagem: 'Fazenda informada não encontrada.' });
     res.setHeader('X-Data-Source', 'demo');
     const novoDispositivo = {
-      id: FALLBACK_DISPOSITIVOS.length + 1,
+      id: FALLBACK_DISPOSITIVOS.reduce((maiorId, item) => Math.max(maiorId, Number(item.id) || 0), 0) + 1,
+      id_usuario: fazenda.id_usuario,
       nome: nome_dispositivo.trim(),
       mac: mac_address.trim().toUpperCase(),
       online: false,
@@ -273,13 +366,45 @@ app.post('/api/dispositivos', async (req, res) => {
       talhaoVinculado: 'Fazenda de demonstração',
     };
     FALLBACK_DISPOSITIVOS.push(novoDispositivo);
-    return res.status(201).json(novoDispositivo);
+    const { id_usuario: _idUsuario, ...dispositivoPublico } = novoDispositivo;
+    return res.status(201).json(dispositivoPublico);
   }
 
   try {
     const [result] = await pool.execute('INSERT INTO DISPOSITIVOS (nome_dispositivo, mac_address, status_conexao, id_fazenda_fk, id_campo) VALUES (?, ?, \'OFF\', ?, ?)', [nome_dispositivo.trim(), mac_address.trim().toUpperCase(), id_fazenda, id_campo]);
     const [rows] = await pool.execute('SELECT id_dispositivo AS id, nome_dispositivo AS nome, mac_address AS mac, status_conexao AS status, id_fazenda_fk AS id_fazenda, id_campo FROM DISPOSITIVOS WHERE id_dispositivo = ?', [result.insertId]);
     return res.status(201).json({ ...rows[0], online: false });
+  } catch (error) { return contaError(res, error); }
+});
+
+app.delete('/api/dispositivos/:id', verificarTokenSessao, async (req, res) => {
+  const idDispositivo = String(req.params.id);
+  if (!/^\d+$/.test(idDispositivo) || Number(idDispositivo) < 1) {
+    return res.status(400).json({ mensagem: 'Identificador de dispositivo inválido.' });
+  }
+
+  if (!(await verificarBancoDisponivel())) {
+    const dispositivo = FALLBACK_DISPOSITIVOS.find((item) =>
+      String(item.id) === idDispositivo
+      && item.id_usuario === req.usuarioAutenticado
+      && !item.deleted_at,
+    );
+    if (!dispositivo) return res.status(404).json({ mensagem: 'Dispositivo não encontrado.' });
+    dispositivo.deleted_at = new Date().toISOString();
+    dispositivo.online = false;
+    res.setHeader('X-Data-Source', 'demo');
+    return res.status(204).end();
+  }
+
+  try {
+    const [result] = await pool.execute(`UPDATE DISPOSITIVOS d
+      INNER JOIN FAZENDAS f ON f.id_fazenda = d.id_fazenda_fk
+      SET d.deleted_at = CURRENT_TIMESTAMP, d.status_conexao = 'OFF'
+      WHERE d.id_dispositivo = ? AND d.deleted_at IS NULL
+        AND f.id_usuario_fk = ? AND f.deleted_at IS NULL`,
+    [idDispositivo, req.usuarioAutenticado]);
+    if (!result.affectedRows) return res.status(404).json({ mensagem: 'Dispositivo não encontrado.' });
+    return res.status(204).end();
   } catch (error) { return contaError(res, error); }
 });
 
@@ -300,6 +425,7 @@ app.post('/api/login', async (req, res) => {
     if (usuarioFallback) {
       return res.json({
         sucesso: true,
+        accessToken: criarTokenSessao(usuarioFallback.id_usuario),
         usuario: {
           id: usuarioFallback.id_usuario,
           nome: usuarioFallback.nome,
@@ -326,6 +452,7 @@ app.post('/api/login', async (req, res) => {
     if (senhaBanco === senhaNormalizada) {
       return res.json({
         sucesso: true,
+        accessToken: criarTokenSessao(usuarioNoBanco.id_usuario),
         usuario: {
           id: usuarioNoBanco.id_usuario,
           nome: usuarioNoBanco.nome,

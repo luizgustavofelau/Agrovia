@@ -212,6 +212,8 @@ const Dashboard: React.FC = () => {
   }, [userId, refreshKey]);
 
   const logout = () => {
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("usuarioId");
     localStorage.removeItem("usuarioNome");
     localStorage.removeItem("usuarioLogado");
     navigate("/login");
