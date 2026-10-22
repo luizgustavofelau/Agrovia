@@ -1,3 +1,4 @@
+import { apiFetch } from "../services/http";
 import { useEffect, useState } from "react";
 import { Plus } from "lucide-react";
 import CampoModal from "./CampoModal";
@@ -50,7 +51,7 @@ export default function Campos() {
         return;
       }
       try {
-        const res = await fetch(`${API_URL}?id_usuario=${encodeURIComponent(idUsuario)}`);
+        const res = await apiFetch(`${API_URL}?id_usuario=${encodeURIComponent(idUsuario)}`);
         if (!res.ok) throw new Error();
         const dados = (await res.json()) as Campo[];
         if (!cancelado) {
@@ -74,7 +75,7 @@ export default function Campos() {
     if (!idUsuario) throw new Error("Faça login novamente antes de cadastrar uma fazenda.");
 
     try {
-      const res = await fetch(API_URL, {
+      const res = await apiFetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

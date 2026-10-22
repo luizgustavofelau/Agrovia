@@ -33,7 +33,7 @@ async function applyMigrations() {
 
     console.log('[MIGRATION] Todas as migrações terminaram. Execute npm run test-db para conferir o schema.');
   } catch (error) {
-    console.error('[MIGRATION] Falha ao aplicar migrações:', error.message);
+    console.error('[MIGRATION] Falha ao aplicar migrações:', error.code || 'DB_ERROR');
     process.exitCode = 1;
   } finally {
     if (connection) connection.release();

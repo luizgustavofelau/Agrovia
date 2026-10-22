@@ -8,7 +8,7 @@ import Conta from './pages/Conta';
 
 function App() {
   return (
-    <Router>
+    <Router basename={process.env.PUBLIC_URL}>
       <Routes>
         {/* Landing Page com efeito Parallax */}
         <Route path="/" element={<ParallaxDrops />} />

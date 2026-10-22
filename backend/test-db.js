@@ -14,7 +14,7 @@ async function testConnection() {
       console.log('Schema Agrovia pronto para a API.');
     }
   } catch (error) {
-    console.error('Falha ao verificar MySQL/schema:', error.message || error.code || 'Erro sem mensagem fornecida pelo driver.');
+    console.error('Falha ao verificar MySQL/schema:', error.code || 'DB_ERROR');
     process.exitCode = 1;
   } finally {
     await pool.end();

@@ -1,3 +1,4 @@
+import { apiFetch } from "../services/http";
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/login.css';
@@ -15,7 +16,7 @@ const Login: React.FC = () => {
     setErro('');
     setCarregando(true);
     try {
-      const response = await fetch('/api/login', {
+      const response = await apiFetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim(), senha: senha.trim() }),
@@ -43,7 +44,7 @@ const Login: React.FC = () => {
     <div 
       className="login-page"
       style={{
-        backgroundImage: `linear-gradient(to bottom, rgba(14, 26, 15, 0.6) 0%, var(--dark) 100%), url('/img/fundo-login.jpg')`
+        backgroundImage: `linear-gradient(to bottom, rgba(14, 26, 15, 0.6) 0%, var(--dark) 100%), url('${process.env.PUBLIC_URL}/img/fundo-login.jpg')`
       }}
     >
       <div className="login-overlay" />
@@ -81,7 +82,7 @@ const Login: React.FC = () => {
         <div className="login-card">
           <header className="login-header">
             <div className="login-logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
-              <img src="/img/logo-agrovia.png" alt="Agrovia Logo" />
+              <img src={`${process.env.PUBLIC_URL}/img/logo-agrovia.png`} alt="Agrovia Logo" />
               AGRO<span>VIA</span>
             </div>
             <h1 className="login-title">Seja bem-vindo</h1>

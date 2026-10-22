@@ -1,3 +1,4 @@
+import { apiFetch } from "../services/http";
 import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AlertCircle, BookOpen, LogOut, Printer, RefreshCw, Sprout, Wifi } from "lucide-react";
@@ -32,7 +33,7 @@ type DispositivoResumo = {
 type CollectionResult<T> = { records: T[]; demonstracao: boolean };
 
 async function buscarColecao<T>(url: string): Promise<CollectionResult<T>> {
-  const response = await fetch(url);
+  const response = await apiFetch(url);
   if (!response.ok) throw new Error(`A solicitação falhou (${response.status}).`);
   return {
     records: (await response.json()) as T[],

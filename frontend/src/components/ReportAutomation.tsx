@@ -1,3 +1,4 @@
+import { apiFetch } from "../services/http";
 import { FormEvent, useEffect, useState } from "react";
 import { Mail, RefreshCw } from "lucide-react";
 
@@ -30,7 +31,7 @@ export default function ReportAutomation() {
   async function carregarConfiguracao() {
     const token = localStorage.getItem("accessToken");
     if (!token) throw new Error("Sua sessão expirou. Entre novamente para configurar os relatórios.");
-    const response = await fetch(endpoint, { headers: { Authorization: `Bearer ${token}` } });
+    const response = await apiFetch(endpoint, { headers: { Authorization: `Bearer ${token}` } });
     const data = await response.json();
     if (!response.ok) throw new Error(data.mensagem || "Não foi possível carregar a configuração.");
     const result = data as ReportSettings;
@@ -60,7 +61,7 @@ export default function ReportAutomation() {
     setSalvando(true);
     setMensagem("");
     try {
-      const response = await fetch(endpoint, {
+      const response = await apiFetch(endpoint, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

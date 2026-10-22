@@ -32,7 +32,7 @@ export const cropStudies: CropStudy[] = [
     category: "Cereal",
     level: "Fundamentos e manejo",
     summary: "Conheça o ciclo do milho, os fatores que afetam seu desenvolvimento e como acompanhar a água disponível sem perder de vista o sistema de produção.",
-    image: "/img/milho.jpg",
+    image: `${process.env.PUBLIC_URL}/img/milho.jpg`,
     tags: ["cereal", "gramínea", "grãos", "silagem", "irrigação", "solo", "fenologia"],
     chapters: [
       {
@@ -125,7 +125,7 @@ export const cropStudies: CropStudy[] = [
     name: "Soja",
     category: "Leguminosa", level: "Fundamentos e manejo",
     summary: "Estude o ciclo da soja, a relação com o ambiente e o solo, a nodulação e como organizar o acompanhamento hídrico por talhão.",
-    image: "/img/soja.jpg",
+    image: `${process.env.PUBLIC_URL}/img/soja.jpg`,
     tags: ["leguminosa", "grãos", "nodulação", "irrigação", "solo", "fenologia", "fixação biológica"],
     chapters: [
       {
@@ -210,7 +210,7 @@ export const cropStudies: CropStudy[] = [
     name: "Cana-de-açúcar",
     category: "Gramínea perene", level: "Fundamentos e manejo",
     summary: "Um guia introdutório sobre canaviais, ciclo de corte e rebrota, ambiente, conservação do solo e decisões de água em sistemas diversos.",
-    image: "/img/cana-de-acucar.jpg",
+    image: `${process.env.PUBLIC_URL}/img/cana-de-acucar.jpg`,
     imageAlt: "Colheita em um canavial",
     imageCredit: "Foto: proudlyswazi / Unsplash",
     tags: ["gramínea", "perene", "perfilhamento", "soqueira", "irrigação", "solo", "cana-planta"],
@@ -297,7 +297,7 @@ export const cropStudies: CropStudy[] = [
     name: "Café",
     category: "Cultura perene", level: "Fundamentos e manejo",
     summary: "Explore diferenças entre espécies e ambientes, fenologia, solo, água e monitoramento em cafezais de distintas regiões e sistemas.",
-    image: "/img/cafe.jpg",
+    image: `${process.env.PUBLIC_URL}/img/cafe.jpg`,
     imageAlt: "Cerejas amarelas de café arábica em um ramo",
     imageCredit: "Foto: 1500mcoffee / Pexels",
     tags: ["cafeicultura", "cafeeiro", "arábica", "conilon", "perene", "irrigação", "fenologia"],
@@ -384,7 +384,7 @@ export const cropStudies: CropStudy[] = [
     name: "Feijão",
     category: "Leguminosa", level: "Fundamentos e manejo",
     summary: "Um material prático sobre feijoeiro comum, ciclos de cultivo, fases sensíveis, água, solo e cuidados para interpretar sinais na lavoura.",
-    image: "/img/feijao.jpg",
+    image: `${process.env.PUBLIC_URL}/img/feijao.jpg`,
     tags: ["feijoeiro", "leguminosa", "grãos", "florescimento", "irrigação", "solo", "vagens"],
     chapters: [
       {

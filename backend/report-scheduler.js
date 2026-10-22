@@ -100,7 +100,7 @@ async function runDueReports() {
       ]);
       console.info(`[RELATORIOS] Envio automático concluído para usuário ${subscription.id_usuario_fk}.`);
     } catch (error) {
-      console.error(`[RELATORIOS] Falha no envio do usuário ${subscription.id_usuario_fk}:`, error.message || 'erro desconhecido');
+      console.error(`[RELATORIOS] Falha no envio do usuário ${subscription.id_usuario_fk}:`, error.code || 'MAIL_ERROR');
     }
   }
 }
@@ -111,11 +111,17 @@ function startReportScheduler() {
     return;
   }
 
-  const check = () => runDueReports().catch((error) => {
-    console.error('[RELATORIOS] Falha ao verificar relatórios agendados:', error.message || 'erro desconhecido');
-  });
+  let pending = null;
+  const check = () => {
+    if (pending) return;
+    pending = runDueReports().catch((error) => {
+      console.error('[RELATORIOS]', error.code || 'MAIL_ERROR');
+    }).finally(() => { pending = null; });
+  };
   check();
-  setInterval(check, 60 * 1000).unref();
+  const timer = setInterval(check, 60 * 1000);
+  timer.unref();
+  return async () => { clearInterval(timer); await pending; };
 }
 
 module.exports = { isMailConfigured, startReportScheduler };

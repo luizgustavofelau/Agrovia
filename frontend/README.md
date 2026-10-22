@@ -1,35 +1,14 @@
-# Agrovia Frontend - React
+# Frontend Agrovia
 
-Este é o frontend em React para o sistema Agrovia.
+React + TypeScript com Create React App. A configuração de deploy está no [README principal](../README.md#deploy) e os testes no [relatório](../AUDITORIA-DEPLOY.md).
 
-## Instalação
+Copie `.env.example` para `.env` se ainda não existir e ajuste `REACT_APP_API_URL`.
 
-1. Navegue para a pasta frontend:
-   ```
-   cd frontend
-   ```
+```bash
+npm ci
+npm start
+npm run build
+npm run preview
+```
 
-2. Instale as dependências:
-   ```
-   npm install
-   ```
-
-3. Inicie o servidor de desenvolvimento:
-   ```
-   npm start
-   ```
-
-O aplicativo será executado em `http://localhost:3000`.
-
-## Componentes
-
-- `ParallaxDrops`: Componente principal com efeito parallax de gotas de água.
-- `Login`: Página de login.
-
-## Tecnologias
-
-- React
-- TypeScript
-- Framer Motion
-- Tailwind CSS
-- React Router DOM
+O desenvolvimento e a prévia usam `/tecti/2026/gpec05/`. Build em `dist`; transfira seu conteúdo, incluindo `.htaccess`. Não utiliza Vite.

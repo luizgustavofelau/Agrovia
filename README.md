@@ -1,124 +1,91 @@
 # Agrovia
 
-Plataforma web de irrigação inteligente para monitoramento agrícola, gestão de campos, sensores e automação de irrigação.
+Plataforma de irrigação e gestão agrícola. Frontend React 18 + TypeScript com **Create React App (react-scripts 5)**, backend Express 5 / CommonJS, MySQL2 Promise. A arquitetura existente foi preservada; não há Vite nem ORM.
 
-## Stack principal
+## Arquitetura
 
-- Frontend: React + TypeScript + CSS
-- Backend: Node.js + Express + JavaScript
-- Banco: MySQL
-- UI: Tailwind CSS e componentes customizados
+- `frontend/src/App.tsx`: BrowserRouter, rotas `/`, `/login`, `/painel/*` e `/conta`; componentes em `src/components`, conta em `src/pages`, clientes HTTP em `src/services`.
+- `backend/server.js`: rotas `/api/login`, `/api/usuario/:id`, `/api/fazendas`, `/api/culturas`, `/api/dispositivos`, `/api/relatorios/automacao`. Controllers/SQL ficam no próprio servidor, sem camada de models separada.
+- `backend/db.js`: pool único `mysql2/promise`, cinco conexões, fila de até 50, timeout de conexão de 10 segundos; consultas de dados usam parâmetros `?`.
+- Autenticação: token próprio assinado com HMAC-SHA256, validade de oito horas, enviado por `Authorization: Bearer`. Não é JWT. O frontend guarda a sessão no localStorage. Todas as rotas de dados exigem token e os recursos pessoais verificam o proprietário.
+- `backend/password.js`: hashes scrypt. Produção rejeita senhas legadas em texto puro; desenvolvimento ainda as aceita para compatibilidade. O modo de autenticação por conta de demonstração foi removido; banco indisponível retorna 503.
+- `backend/report-scheduler.js`: relatórios opcionais por SMTP; não configura SMTP durante a auditoria. Evita verificações sobrepostas e aguarda o trabalho ativo no encerramento, com limite global de dez segundos.
+- Não há ingestão real de telemetria nem histórico de leituras. Os relatórios usam somente os dados operacionais existentes.
 
-## Estrutura do projeto
+## Deploy
 
-- `frontend/` — interface web da aplicação
-- `backend/` — API REST e integração com banco de dados
-- `*.jsx` e `*.tsx` — componentes e telas da aplicação
+### Frontend — Hostinger/Apache
 
-## Requisitos
+Diretório: `frontend`. Node: `24.x`. Instalação: `npm ci`. Build: `npm run build`. Saída: `frontend/dist`.
 
-- Node.js 18+
-- npm
-- MySQL (para uso real em produção/desenvolvimento com banco)
-- Banco criado previamente e usuário MySQL com permissões para criar/alterar tabelas e índices
+O caminho público é **`/tecti/2026/gpec05/`**, definido por `homepage` no package.json. BrowserRouter usa `process.env.PUBLIC_URL`, calculado pelo CRA a partir desse caminho. Vite `base` e `VITE_API_URL` não se aplicam: utilize `REACT_APP_API_URL` no único `.env` do frontend. Não coloque segredos nessa variável, pois seu valor entra no JavaScript público.
 
-## Como rodar
+Local: `REACT_APP_API_URL=http://localhost:5000`.
+Produção: `REACT_APP_API_URL=` seguido da **origem HTTPS real da API Render**, sem `/api` e sem barra final. Essa URL ainda está pendente. Alterar o `.env` exige novo build.
 
-### 1) Instalar dependências do frontend
+O build exige URL HTTP(S) explícita e sempre gera `dist`. `public/.htaccess` será copiado para `dist/.htaccess`; contém RewriteBase do grupo e fallback de rotas para index.html. Não crie esse arquivo manualmente no FileZilla. Não defina PUBLIC_URL diferente de homepage sem também revisar o fallback Apache.
+
+No FileZilla, abra `frontend/dist` e transfira **seu conteúdo**, incluindo `.htaccess`, `index.html`, `static/`, `img/` e demais arquivos gerados, para o diretório já atribuído ao grupo pela conta FTP. Não crie uma pasta `dist` extra no servidor. Não envie `.env`, fontes, backend, node_modules, Git ou arquivos de credenciais. Exiba arquivos ocultos para conferir `.htaccess`. Não altere permissões ou diretórios da hospedagem.
+
+### Backend — Render
+
+| Campo | Valor |
+| --- | --- |
+| Service Type | Web Service |
+| Repository | https://github.com/luizgustavofelau/Agrovia |
+| Branch | master (branch atual; confirmar como branch de publicação) |
+| Root Directory | backend |
+| Runtime | Node |
+| Node | 24.x, definido em engines |
+| Build Command | npm ci |
+| Start Command | npm start |
+| Health Check Path | /health |
+| Auto Deploy | Desativado até concluir testes integrados; depois habilitar conforme decisão do grupo |
+
+Cadastre `NODE_ENV=production`, `DB_HOST`, `DB_PORT=3306` (ou a porta fornecida), `DB_USER`, `DB_PASS`, `DB_NAME`, `AUTH_TOKEN_SECRET` e `FRONTEND_URL`. Preserve `DB_PASS`, nome já usado pelo projeto. `AUTH_TOKEN_SECRET` deve ser aleatório, com pelo menos 32 caracteres; gere com `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` e guarde fora do Git. O Render fornece `PORT`; o servidor escuta em `0.0.0.0`, com 5000 como padrão local. Não é necessário cadastrar PORT manualmente.
+
+`FRONTEND_URL` é a origem institucional HTTPS **sem subpasta nem barra final**. O domínio ainda precisa ser informado. CORS permite essa origem; em desenvolvimento também permite `http://localhost:3000`. Tokens usam cabeçalho, sem dependência de cookies cross-site.
+
+Opcionais, somente para relatórios: `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`. `TZ=America/Sao_Paulo` documenta o fuso utilizado na formatação dos relatórios. Não ative SMTP antes de revisar assinaturas existentes, pois o agendador inicia com o servidor.
+
+`GET /health` confirma processo HTTP; `GET /api/health` confirma conexão e colunas requeridas, retornando 503 quando indisponível/incompleto, sem expor nomes internos. O startup e o build nunca aplicam alterações estruturais. SIGTERM/SIGINT encerram HTTP, agendador e pool.
+
+### Banco de dados — MySQL2
+
+As credenciais são as fornecidas pela instituição para o MySQL Hostinger existente. Não crie outro banco e não altere permissões. A conectividade remota continua pendente de teste no Render.
+
+Scripts SQL em `backend/migrations`, em ordem:
+
+| Script | Estrutura |
+| --- | --- |
+| 000_core_schema.sql | USUARIO, CULTURAS, FAZENDAS, DISPOSITIVOS e relacionamentos |
+| 001_conta.sql | Nome e campo do dispositivo |
+| 002_fazenda_detalhes.sql | Área, talhões e observações |
+| 003_soft_delete_fazendas.sql | Exclusão lógica de fazendas e índice |
+| 004_soft_delete_dispositivos.sql | Exclusão lógica, MAC ativo calculado e substituição de índice único |
+| 005_relatorios_automaticos.sql | Preferências e agendamento por usuário |
+
+Os nomes de tabelas estão em maiúsculas; respeite exatamente essa capitalização no MySQL/Linux. Os scripts documentam a estrutura esperada, mas não provam que a base remota corresponde a ela. `test-db` consulta SELECT e INFORMATION_SCHEMA. Não exporta dados. A exclusão lógica de fazenda usa transação, rollback e release em finally. Migrador e conversor também liberam conexões; consultas comuns usam o pool diretamente.
+
+Antes de qualquer operação manual: faça backup, confirme o banco e revise as estruturas existentes e os seis SQL. `CREATE TABLE IF NOT EXISTS` não corrige tipos ou índices de tabelas antigas. O script 004 substitui um índice, portanto exige revisão e janela controlada. Não foi executado nesta auditoria.
+
+Comandos em `backend`:
 
 ```bash
-cd frontend
-npm install
-```
-
-### 2) Instalar dependências do backend
-
-```bash
-cd backend
-npm install
-```
-
-### 3) Configurar o banco e as variáveis de ambiente
-
-Crie o banco uma vez, caso ainda não exista. Use o mesmo nome informado em `DB_NAME`:
-
-```sql
-CREATE DATABASE agrovia
-	CHARACTER SET utf8mb4
-	COLLATE utf8mb4_unicode_ci;
-```
-
-Copie `backend/.env.example` para `backend/.env` (no PowerShell, `Copy-Item backend/.env.example backend/.env`) e preencha os dados locais. Se `backend/.env` já existir, edite-o sem sobrescrever:
-
-```env
-DB_HOST=localhost
-DB_USER=root
-DB_PASS=sua_senha
-DB_NAME=agrovia
-DB_PORT=3306
-PORT=5000
-# AUTH_TOKEN_SECRET=configure-um-segredo-aleatorio-forte-em-producao
-```
-
-Não envie `backend/.env` ao Git e não compartilhe credenciais. A aplicação não cria usuários administrativos automaticamente; provisionar uma conta inicial deve seguir o procedimento de segurança do ambiente.
-
-### 4) Preparar e conferir o schema
-
-Na raiz do projeto, aplique as migrações aditivas em ordem e confira banco e colunas requeridas:
-
-```powershell
-Push-Location backend
-npm run db:migrate
 npm run test-db
-Pop-Location
+npm run db:migrate -- --dry-run
 ```
 
-O migrador lê os arquivos numerados de `backend/migrations/` e pode ser executado novamente: as tabelas são criadas com `IF NOT EXISTS`, e as migrações de colunas verificam se cada coluna já existe. A migração `001_conta.sql` adiciona campos de dispositivo; `002_fazenda_detalhes.sql` adiciona área, talhões e observações.
+Somente após revisão e backup, o responsável pode executar manualmente `npm run db:migrate`. Nunca coloque esse comando no build/start do Render.
 
-Para conferir a ordem/segmentação sem conectar nem executar SQL, use `npm run db:migrate -- --dry-run`.
+Para contas legadas, `node hash-passwords.js` informa apenas a contagem de senhas sem prefixo scrypt, sem imprimir valores e sem gravar. Após backup e revisão, `node hash-passwords.js --apply` converte senhas existentes em transação. **Não foi executado durante a auditoria.** Em produção, contas não convertidas não autenticam. Para provisionar contas novas, use o procedimento administrativo da instituição com hash produzido por `hashPassword` de `password.js`. Não existe cadastro público de usuário.
 
-Para uma base já existente, faça backup antes, confira o nome do banco e revise `SHOW CREATE TABLE` nas tabelas atuais. As migrações não apagam dados, mas `CREATE TABLE IF NOT EXISTS` não corrige tipos/índices de tabelas antigas. O diagnóstico informa colunas requeridas que ainda faltam; resolva divergências antes de usar a aplicação.
+## Segurança e limitações
 
-O endpoint `GET http://localhost:5000/api/health` retorna se a API está ativa, se o banco conectou e se o schema tem as colunas esperadas. `npm run test-db` faz a mesma verificação pelo terminal.
+A credencial fixa de demonstração existia no código/histórico. Remover a versão atual não apaga sua exposição: revogue/substitua essa credencial caso tenha sido reutilizada em qualquer ambiente. Troque também qualquer senha ou segredo real que tenha sido compartilhado ou commitado anteriormente. Não reescrevemos o histórico.
 
-A migração `003_soft_delete_fazendas.sql` adiciona `FAZENDAS.deleted_at`; `004_soft_delete_dispositivos.sql` adiciona exclusão lógica de dispositivos e um índice que permite reutilizar um MAC somente depois que o registro anterior for removido. Execute `npm run db:migrate` após atualizar o projeto. Fazendas e dispositivos removidos deixam de aparecer nas listagens, mas não são apagados imediatamente do banco. Remover um dispositivo também marca seu status como desconectado; a aplicação ainda não possui ingestão nem histórico de telemetria. O login emite um token com validade de 8 horas para autorizar exclusões. Defina `AUTH_TOKEN_SECRET` com um valor aleatório forte no ambiente; se omitido, a API usa um segredo temporário e invalida as sessões ao reiniciar.
+O armazenamento local de tokens permanece e exige cuidado com XSS. Limitação de tentativas de login e revisão de dependências são melhorias futuras; esta preparação não equivale a uma auditoria de segurança completa. Não foram feitos testes destrutivos nem alterações em dados reais.
 
-A migração `005_relatorios_automaticos.sql` cria as preferências de envio. Para ativar relatórios por e-mail, configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS` e, opcionalmente, `SMTP_FROM` em `backend/.env`; em seguida, reinicie a API e aplique as migrações. O usuário opta pelo envio semanal ou diário na seção Relatórios. O agendador verifica os envios a cada minuto e envia o primeiro relatório após o intervalo escolhido. Atualmente o e-mail resume fazendas, culturas cadastradas e conexão dos dispositivos. Leituras e condições da plantação não estão integradas, então o relatório deixa essa limitação explícita e não gera diagnóstico agronômico.
+Referências: [configuração CRA](https://create-react-app.dev/docs/advanced-configuration/), [deploy CRA](https://create-react-app.dev/docs/deployment/), [Node no Render](https://render.com/docs/node-version), [Web Services Render](https://render.com/docs/web-services).
 
-### 5) Iniciar backend e frontend
-
-Mantenha cada servidor em um terminal separado, ambos abertos:
-
-```bash
-Push-Location backend
-npm start
-```
-
-```bash
-Push-Location frontend
-npm start
-```
-
-A aplicação ficará disponível em:
-
-- Frontend: `http://localhost:3000`
-- Backend: `http://localhost:5000`
-
-## Credencial de acesso local
-
-Para ambiente de teste sem banco configurado, o sistema aceita o usuário padrão:
-
-- E-mail: `miguelmaximus2008@gmail.com`
-- Senha: `adm123`
-
-Essa credencial só é aceita enquanto o banco estiver indisponível. Com MySQL conectado, o acesso é validado exclusivamente contra `USUARIO`; provisione a conta inicial pelo procedimento administrativo seguro do ambiente.
-
-## Observações importantes
-
-- O projeto já inclui uma camada de autenticação local de fallback para permitir testes quando o banco ainda não está conectado.
-- O backend depende de um banco MySQL funcional para uso em produção real.
-- Os cadastros fallback são voláteis e vêm marcados como demonstração; não são persistidos no MySQL.
-- O schema atual armazena usuários, culturas, fazendas e dispositivos. Ainda não há tabelas/rotas de leituras, histórico, alertas de telemetria ou eventos de irrigação.
-- Os relatórios automáticos enviam apenas os dados operacionais existentes. Para incluir condições reais da plantação, ainda é necessário implementar a ingestão e o armazenamento das leituras dos sensores.
-- As telas de cadastro de campos e dispositivos usam as rotas já existentes. Leituras em tempo real dependem de integração de sensores que ainda precisa ser implementada.
-- O projeto foi pensado para apresentação acadêmica e evolução contínua para TCC.
+Veja `AUDITORIA-DEPLOY.md` para resultados, pendências, checklist e instruções operacionais na ordem de publicação.

@@ -1,5 +1,6 @@
+import { apiFetch } from "./http";
 export async function excluirFazenda(id: string | number, accessToken: string): Promise<void> {
-  const response = await fetch(`/api/fazendas/${encodeURIComponent(String(id))}`, {
+  const response = await apiFetch(`/api/fazendas/${encodeURIComponent(String(id))}`, {
     method: "DELETE",
     headers: { Authorization: `Bearer ${accessToken}` },
   });

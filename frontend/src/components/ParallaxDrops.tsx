@@ -30,11 +30,11 @@ const features = [
 ];
 
 const cropPreviews = [
-  { name: "Milho", category: "Cereal", image: "/img/milho.jpg", imageAlt: "Lavoura de milho", description: "Acompanhe emergência, crescimento vegetativo, florescimento e enchimento de grãos. O material aborda como época, solo e disponibilidade de água interagem em diferentes sistemas de produção." },
-  { name: "Soja", category: "Leguminosa", image: "/img/soja.jpg", imageAlt: "Plantas e vagens de soja", description: "Explore desenvolvimento, nodulação, ambiente e manejo hídrico da soja. As orientações consideram que cultivar, fotoperíodo e calendário variam conforme a região." },
-  { name: "Cana-de-açúcar", category: "Gramínea perene", image: "/img/cana-de-acucar.jpg", imageAlt: "Colheita em um canavial", imageCredit: "Foto: proudlyswazi / Unsplash", description: "Entenda o estabelecimento do canavial, o perfilhamento, os ciclos de corte e a rebrota da soqueira. O manejo de água e solo depende do ambiente, da variedade e do sistema de produção." },
-  { name: "Café", category: "Cultura perene", image: "/img/cafe.jpg", imageAlt: "Cerejas amarelas de café arábica em um ramo", imageCredit: "Foto: 1500mcoffee / Pexels", description: "Conheça diferenças entre espécies, fases fenológicas e condições de cultivo. Floradas, desenvolvimento dos frutos, solo e disponibilidade hídrica precisam ser interpretados no contexto de cada região." },
-  { name: "Feijão", category: "Leguminosa", image: "/img/feijao.jpg", imageAlt: "Cultivo de feijão", description: "Revise estabelecimento, florescimento, formação de vagens e enchimento de grãos. O conteúdo relaciona estresse hídrico, drenagem e escolha de época às condições locais." },
+  { name: "Milho", category: "Cereal", image: `${process.env.PUBLIC_URL}/img/milho.jpg`, imageAlt: "Lavoura de milho", description: "Acompanhe emergência, crescimento vegetativo, florescimento e enchimento de grãos. O material aborda como época, solo e disponibilidade de água interagem em diferentes sistemas de produção." },
+  { name: "Soja", category: "Leguminosa", image: `${process.env.PUBLIC_URL}/img/soja.jpg`, imageAlt: "Plantas e vagens de soja", description: "Explore desenvolvimento, nodulação, ambiente e manejo hídrico da soja. As orientações consideram que cultivar, fotoperíodo e calendário variam conforme a região." },
+  { name: "Cana-de-açúcar", category: "Gramínea perene", image: `${process.env.PUBLIC_URL}/img/cana-de-acucar.jpg`, imageAlt: "Colheita em um canavial", imageCredit: "Foto: proudlyswazi / Unsplash", description: "Entenda o estabelecimento do canavial, o perfilhamento, os ciclos de corte e a rebrota da soqueira. O manejo de água e solo depende do ambiente, da variedade e do sistema de produção." },
+  { name: "Café", category: "Cultura perene", image: `${process.env.PUBLIC_URL}/img/cafe.jpg`, imageAlt: "Cerejas amarelas de café arábica em um ramo", imageCredit: "Foto: 1500mcoffee / Pexels", description: "Conheça diferenças entre espécies, fases fenológicas e condições de cultivo. Floradas, desenvolvimento dos frutos, solo e disponibilidade hídrica precisam ser interpretados no contexto de cada região." },
+  { name: "Feijão", category: "Leguminosa", image: `${process.env.PUBLIC_URL}/img/feijao.jpg`, imageAlt: "Cultivo de feijão", description: "Revise estabelecimento, florescimento, formação de vagens e enchimento de grãos. O conteúdo relaciona estresse hídrico, drenagem e escolha de época às condições locais." },
 ];
 
 const ParallaxDrops: React.FC = () => {
@@ -82,7 +82,7 @@ const ParallaxDrops: React.FC = () => {
       {/* ──── NAV ──── */}
       <nav className="nav">
         <div className="nav-logo">
-          <img src="/img/logo-agrovia.png" alt="Agrovia Logo" className="nav-logo-img" style={{ height: '42px' }} />
+          <img src={`${process.env.PUBLIC_URL}/img/logo-agrovia.png`} alt="Agrovia Logo" className="nav-logo-img" style={{ height: '42px' }} />
           AGRO<span>VIA</span>
         </div>
         <ul className="nav-links">
@@ -212,7 +212,7 @@ const ParallaxDrops: React.FC = () => {
         ></div>
         <div className="parallax-mid-content">
           <div className="mid-brand">
-            <img src="/img/logo-agrovia.png" alt="Agrovia Logo" className="mid-logo-img" />
+            <img src={`${process.env.PUBLIC_URL}/img/logo-agrovia.png`} alt="Agrovia Logo" className="mid-logo-img" />
           </div>
           <p className="pull-quote">
             Conhecimento e contexto,{" "}
@@ -285,7 +285,7 @@ const ParallaxDrops: React.FC = () => {
       {/* ──── CTA ──── */}
       <section className="cta-section">
         <div className="cta-brand">
-          <img src="/img/logo-agrovia.png" alt="Agrovia Logo" className="cta-logo-img" />
+          <img src={`${process.env.PUBLIC_URL}/img/logo-agrovia.png`} alt="Agrovia Logo" className="cta-logo-img" />
           <span className="cta-brand-name">AGRO<span>VIA</span></span>
         </div>
         <p className="section-tag">Agrovia</p>
@@ -306,7 +306,7 @@ const ParallaxDrops: React.FC = () => {
       {/* ──── FOOTER ──── */}
       <footer className="footer">
         <div className="footer-logo">
-          <img src="/img/logo-agrovia.png" alt="Agrovia Logo" className="footer-logo-img" style={{ height: '36px' }} />
+          <img src={`${process.env.PUBLIC_URL}/img/logo-agrovia.png`} alt="Agrovia Logo" className="footer-logo-img" style={{ height: '36px' }} />
           AGRO<span>VIA</span>
         </div>
         <div className="footer-copy">© 2026 AGROVIA · TCC UNASP Engenheiro Coelho</div>

@@ -1,4 +1,7 @@
 const REQUIRED_COLUMNS = [
+  'RELATORIO_AUTOMATICO.id_usuario_fk', 'RELATORIO_AUTOMATICO.ativo',
+  'RELATORIO_AUTOMATICO.frequencia', 'RELATORIO_AUTOMATICO.proximo_envio',
+  'RELATORIO_AUTOMATICO.ultimo_envio',
   'USUARIO.id_usuario', 'USUARIO.nome', 'USUARIO.email', 'USUARIO.senha',
   'USUARIO.telefone', 'USUARIO.tipo_usuario',
   'CULTURAS.id_cultura', 'CULTURAS.nome_cultura', 'CULTURAS.descricao_tecnica',
@@ -16,7 +19,7 @@ async function inspectSchema(pool) {
   const [columns] = await pool.query(`SELECT TABLE_NAME, COLUMN_NAME
     FROM INFORMATION_SCHEMA.COLUMNS
     WHERE TABLE_SCHEMA = DATABASE()
-      AND TABLE_NAME IN ('USUARIO', 'CULTURAS', 'FAZENDAS', 'DISPOSITIVOS')`);
+      AND TABLE_NAME IN ('USUARIO', 'CULTURAS', 'FAZENDAS', 'DISPOSITIVOS', 'RELATORIO_AUTOMATICO')`);
   const availableColumns = new Set(columns.map((column) => `${column.TABLE_NAME}.${column.COLUMN_NAME}`));
   const missingColumns = REQUIRED_COLUMNS.filter((column) => !availableColumns.has(column));
   return { ready: missingColumns.length === 0, missingColumns };

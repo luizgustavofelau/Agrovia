@@ -1,35 +1,34 @@
 
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
-console.log('Variáveis carregadas:', {
-  DB_HOST: process.env.DB_HOST,
-  DB_USER: process.env.DB_USER,
-  DB_NAME: process.env.DB_NAME,
-  DB_PORT: process.env.DB_PORT,
-  PORT: process.env.PORT,
-});
 
 const express = require('express');
 const cors = require('cors');
 const crypto = require('crypto');
+const { verifyPassword } = require('./password');
 const { pool } = require('./db');
 const { inspectSchema } = require('./schema-check');
 const { isMailConfigured, startReportScheduler } = require('./report-scheduler');
 
 const app = express();
-app.use(cors());
+const production = process.env.NODE_ENV === 'production';
+if (production) {
+  const required = ['DB_HOST', 'DB_USER', 'DB_PASS', 'DB_NAME', 'AUTH_TOKEN_SECRET', 'FRONTEND_URL'];
+  if (required.some((key) => !process.env[key])) throw new Error('Configure as variáveis obrigatórias do backend.');
+  if (process.env.AUTH_TOKEN_SECRET.length < 32) throw new Error('AUTH_TOKEN_SECRET deve ter pelo menos 32 caracteres.');
+}
+const frontendOrigin = process.env.FRONTEND_URL;
+if (frontendOrigin && new URL(frontendOrigin).origin !== frontendOrigin) {
+  throw new Error('FRONTEND_URL deve conter somente a origem, sem caminho ou barra final.');
+}
+const allowedOrigins = new Set([frontendOrigin, ...(!production ? ['http://localhost:3000'] : [])].filter(Boolean));
+app.use(cors({
+  origin(origin, callback) { callback(null, !origin || allowedOrigins.has(origin)); },
+  exposedHeaders: ['X-Data-Source'],
+}));
 app.use(express.json());
 
-const FALLBACK_USUARIOS = [
-  {
-    id_usuario: 1,
-    nome: 'Miguel Maximus',
-    email: 'miguelmaximus2008@gmail.com',
-    senha: 'adm123',
-    telefone: '(11) 98765-4321',
-    tipo_usuario: 'ADMIN',
-  },
-];
+const FALLBACK_USUARIOS = [];
 
 const FALLBACK_FAZENDAS = [
   { id: 1, id_usuario: 1, nome: 'Fazenda Vale Verde', localizacao: 'São José do Rio Preto - SP', cultura: 'Soja' },
@@ -84,6 +83,22 @@ const verificarTokenSessao = (req, res, next) => {
   return next();
 };
 
+app.get('/health', (_req, res) => res.json({ status: 'ok' }));
+// Todas as operações de conta exigem sessão, inclusive leituras e cadastros.
+app.use('/api', (req, res, next) => {
+  if (req.path === '/login' || req.path === '/health') return next();
+  return verificarTokenSessao(req, res, next);
+});
+app.use('/api', (req, res, next) => {
+  const requestedId = req.query.id_usuario ?? req.body?.id_usuario;
+  const profile = req.path.match(/^\/usuario\/([^/]+)$/);
+  if ((requestedId !== undefined && Number(requestedId) !== req.usuarioAutenticado)
+    || (profile && Number(profile[1]) !== req.usuarioAutenticado)) {
+    return res.status(403).json({ mensagem: 'Acesso não autorizado.' });
+  }
+  next();
+});
+
 app.get('/api/relatorios/automacao', verificarTokenSessao, async (req, res) => {
   try {
     const [rows] = await pool.execute(`SELECT u.email, r.ativo, r.frequencia,
@@ -102,7 +117,7 @@ app.get('/api/relatorios/automacao', verificarTokenSessao, async (req, res) => {
       smtpConfigurado: isMailConfigured(),
     });
   } catch (error) {
-    console.error('[RELATORIOS] Falha ao carregar automação:', error.message || 'erro desconhecido');
+    console.error('[RELATORIOS] Falha ao carregar automação:', error.code || 'DB_ERROR');
     return res.status(503).json({ mensagem: 'Automação indisponível. Verifique se a migração do banco foi aplicada.' });
   }
 });
@@ -136,7 +151,7 @@ app.put('/api/relatorios/automacao', verificarTokenSessao, async (req, res) => {
       mensagem: ativo ? 'Envio automático ativado.' : 'Envio automático desativado.',
     });
   } catch (error) {
-    console.error('[RELATORIOS] Falha ao salvar automação:', error.message || 'erro desconhecido');
+    console.error('[RELATORIOS] Falha ao salvar automação:', error.code || 'DB_ERROR');
     return res.status(503).json({ mensagem: 'Não foi possível salvar a automação. Verifique se a migração do banco foi aplicada.' });
   }
 });
@@ -146,8 +161,10 @@ const verificarBancoDisponivel = async () => {
     await pool.query('SELECT 1 AS ok');
     return true;
   } catch (error) {
-    console.warn('[DB] Banco indisponível — usando fallback:', error.message || error.code || 'Erro sem mensagem fornecida pelo driver.');
-    return false;
+    console.warn('[DB] Banco indisponível:', error.code || 'DB_ERROR');
+    const unavailable = new Error('Banco indisponível');
+    unavailable.status = 503;
+    throw unavailable;
   }
 };
 
@@ -161,7 +178,7 @@ app.get('/api/health', async (_req, res) => {
   try {
     const schema = await inspectSchema(pool);
     if (!schema.ready) {
-      return res.status(503).json({ api: 'ok', database: 'connected', schema: 'incomplete', missingColumns: schema.missingColumns });
+      return res.status(503).json({ api: 'ok', database: 'connected', schema: 'incomplete' });
     }
     return res.json({ api: 'ok', database: 'connected', schema: 'ready' });
   } catch (_error) {
@@ -181,7 +198,7 @@ const localizarUsuarioFallback = (email, senha) => {
 };
 
 const contaError = (res, error) => {
-  console.error('[CONTA]', error);
+  console.error('[CONTA]', error.code || 'DB_ERROR');
   if (error.code === 'ER_DUP_ENTRY') return res.status(409).json({ mensagem: 'O registro informado já existe.' });
   if (error.code === 'ER_NO_REFERENCED_ROW_2') return res.status(400).json({ mensagem: 'A fazenda ou o campo informado não existe.' });
   return res.status(500).json({ mensagem: 'Erro interno ao acessar os dados da conta.' });
@@ -429,6 +446,8 @@ app.post('/api/dispositivos', async (req, res) => {
   }
 
   try {
+    const [owned] = await pool.execute('SELECT id_fazenda FROM FAZENDAS WHERE id_fazenda = ? AND id_usuario_fk = ? AND deleted_at IS NULL', [id_fazenda, req.usuarioAutenticado]);
+    if (!owned.length) return res.status(403).json({ mensagem: 'Fazenda não autorizada.' });
     const [result] = await pool.execute('INSERT INTO DISPOSITIVOS (nome_dispositivo, mac_address, status_conexao, id_fazenda_fk, id_campo) VALUES (?, ?, \'OFF\', ?, ?)', [nome_dispositivo.trim(), mac_address.trim().toUpperCase(), id_fazenda, id_campo]);
     const [rows] = await pool.execute('SELECT id_dispositivo AS id, nome_dispositivo AS nome, mac_address AS mac, status_conexao AS status, id_fazenda_fk AS id_fazenda, id_campo FROM DISPOSITIVOS WHERE id_dispositivo = ?', [result.insertId]);
     return res.status(201).json({ ...rows[0], online: false });
@@ -471,7 +490,7 @@ app.post('/api/login', async (req, res) => {
   const emailNormalizado = normalizarEmail(email);
   const senhaNormalizada = String(senha || '').trim();
 
-  console.log(`[LOGIN] Tentativa de login para: ${emailNormalizado}`);
+
 
   if (!emailNormalizado || !senhaNormalizada) {
     return res.status(400).json({ sucesso: false, mensagem: 'E-mail e senha são obrigatórios.' });
@@ -507,7 +526,7 @@ app.post('/api/login', async (req, res) => {
     const usuarioNoBanco = results[0];
     const senhaBanco = usuarioNoBanco.senha ? usuarioNoBanco.senha.toString().trim() : '';
 
-    if (senhaBanco === senhaNormalizada) {
+    if (await verifyPassword(senhaNormalizada, senhaBanco, !production)) {
       return res.json({
         sucesso: true,
         accessToken: criarTokenSessao(usuarioNoBanco.id_usuario),
@@ -523,20 +542,35 @@ app.post('/api/login', async (req, res) => {
 
     return res.status(401).json({ sucesso: false, mensagem: 'Senha inválida.' });
   } catch (err) {
-    const dbHost = process.env.DB_HOST;
-    const dbPort = process.env.DB_PORT || 3306;
-    console.error(`[LOGIN] Erro ao conectar ao banco em ${dbHost}:${dbPort}`);
-    console.error('Detalhes do erro:', err);
-    if (err && (err.code === 'ECONNREFUSED' || err.code === 'ETIMEDOUT' || !dbHost)) {
-      return res.status(500).json({ sucesso: false, mensagem: `Não foi possível conectar ao banco de dados em ${dbHost || 'localhost'}:${dbPort}. Verifique se o host e porta estão corretos e se o banco aceita conexões remotas.` });
-    }
+    console.error('[LOGIN]', err.code || 'DB_ERROR');
     return res.status(500).json({ sucesso: false, mensagem: 'Erro interno no servidor.' });
   }
 });
 
-const port = Number(process.env.PORT) || 5000;
-
-app.listen(port, () => {
-  console.log(`🚀 Servidor AgroVia rodando em http://localhost:${port}`);
-  startReportScheduler();
+app.use((error, _req, res, _next) => {
+  console.error('[API]', error.code || error.status || 'INTERNAL_ERROR');
+  const status = error.status === 503 ? 503 : error.status === 400 ? 400 : 500;
+  res.status(status).json({ mensagem: status === 503 ? 'Banco de dados indisponível.' : status === 400 ? 'Requisição inválida.' : 'Erro interno no servidor.' });
 });
+
+const port = Number(process.env.PORT) || 5000;
+let stopScheduler;
+const server = app.listen(port, '0.0.0.0', () => {
+  console.log(`Servidor Agrovia iniciado na porta ${port}`);
+  stopScheduler = startReportScheduler();
+});
+let closing = false;
+async function shutdown() {
+  if (closing) return;
+  closing = true;
+  const timeout = setTimeout(() => process.exit(1), 10000).unref();
+  server.close(async () => {
+    try {
+      if (stopScheduler) await stopScheduler();
+      await pool.end();
+      clearTimeout(timeout);
+    } catch (_error) { process.exitCode = 1; }
+  });
+}
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);

@@ -1,7 +1,8 @@
+import { apiFetch } from "./http";
 import type { Dispositivo } from "../components/DispositivoCard";
 
 export async function listarDispositivos(idUsuario: string): Promise<{ dispositivos: Dispositivo[]; demonstracao: boolean }> {
-  const response = await fetch(`/api/dispositivos?id_usuario=${encodeURIComponent(idUsuario)}`);
+  const response = await apiFetch(`/api/dispositivos?id_usuario=${encodeURIComponent(idUsuario)}`);
   if (!response.ok) throw new Error("Não foi possível carregar os dispositivos.");
   return {
     dispositivos: await response.json() as Dispositivo[],
@@ -10,7 +11,7 @@ export async function listarDispositivos(idUsuario: string): Promise<{ dispositi
 }
 
 export async function removerDispositivo(id: string | number, accessToken: string): Promise<void> {
-  const response = await fetch(`/api/dispositivos/${encodeURIComponent(String(id))}`, {
+  const response = await apiFetch(`/api/dispositivos/${encodeURIComponent(String(id))}`, {
     method: "DELETE",
     headers: { Authorization: `Bearer ${accessToken}` },
   });

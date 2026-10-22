@@ -9,12 +9,11 @@ const dbConfig = {
   database: process.env.DB_NAME,
   port: process.env.DB_PORT ? Number(process.env.DB_PORT) : 3306,
   waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
+  connectionLimit: 5,
+  queueLimit: 50,
+  connectTimeout: 10000,
 };
 
-const { password, ...safeDbConfig } = dbConfig;
-console.log('[DB] Tentando conectar ao banco com as configurações:', safeDbConfig);
 
 const pool = mysql.createPool(dbConfig);
 

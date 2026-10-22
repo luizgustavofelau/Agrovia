@@ -1,3 +1,4 @@
+import { API_ORIGIN } from "../services/http";
 import React, { FormEvent, useEffect, useState } from "react";
 import axios from "axios";
 import {
@@ -46,7 +47,12 @@ export interface Dispositivo {
   fazenda?: string;
 }
 
-const api = axios.create({ baseURL: process.env.REACT_APP_API_URL || "" });
+const api = axios.create({ baseURL: API_ORIGIN });
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("accessToken");
+  if (token) config.headers.set("Authorization", `Bearer ${token}`);
+  return config;
+});
 const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: "perfil", label: "Perfil", icon: User },
   { id: "fazendas", label: "Fazendas", icon: Building2 },
