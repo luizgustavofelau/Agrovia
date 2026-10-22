@@ -14,6 +14,7 @@ const cors = require('cors');
 const crypto = require('crypto');
 const { pool } = require('./db');
 const { inspectSchema } = require('./schema-check');
+const { isMailConfigured, startReportScheduler } = require('./report-scheduler');
 
 const app = express();
 app.use(cors());
@@ -82,6 +83,63 @@ const verificarTokenSessao = (req, res, next) => {
   req.usuarioAutenticado = conteudo.sub;
   return next();
 };
+
+app.get('/api/relatorios/automacao', verificarTokenSessao, async (req, res) => {
+  try {
+    const [rows] = await pool.execute(`SELECT u.email, r.ativo, r.frequencia,
+        r.proximo_envio, r.ultimo_envio
+      FROM USUARIO u
+      LEFT JOIN RELATORIO_AUTOMATICO r ON r.id_usuario_fk = u.id_usuario
+      WHERE u.id_usuario = ?`, [req.usuarioAutenticado]);
+    if (!rows.length) return res.status(404).json({ mensagem: 'Usuário não encontrado.' });
+    const settings = rows[0];
+    return res.json({
+      email: settings.email,
+      ativo: Boolean(settings.ativo),
+      frequencia: settings.frequencia || 'semanal',
+      proximoEnvio: settings.proximo_envio,
+      ultimoEnvio: settings.ultimo_envio,
+      smtpConfigurado: isMailConfigured(),
+    });
+  } catch (error) {
+    console.error('[RELATORIOS] Falha ao carregar automação:', error.message || 'erro desconhecido');
+    return res.status(503).json({ mensagem: 'Automação indisponível. Verifique se a migração do banco foi aplicada.' });
+  }
+});
+
+app.put('/api/relatorios/automacao', verificarTokenSessao, async (req, res) => {
+  const { ativo, frequencia } = req.body;
+  if (typeof ativo !== 'boolean' || !['diario', 'semanal'].includes(frequencia)) {
+    return res.status(400).json({ mensagem: 'Informe se os envios estão ativos e escolha uma frequência válida.' });
+  }
+  if (ativo && !isMailConfigured()) {
+    return res.status(503).json({ mensagem: 'O envio por e-mail ainda não está configurado no servidor.' });
+  }
+
+  try {
+    await pool.execute(`INSERT INTO RELATORIO_AUTOMATICO
+        (id_usuario_fk, ativo, frequencia, proximo_envio)
+      VALUES (?, ?, ?, IF(? = 1, DATE_ADD(NOW(), INTERVAL CASE WHEN ? = 'diario' THEN 1 ELSE 7 END DAY), NULL))
+      ON DUPLICATE KEY UPDATE
+        ativo = VALUES(ativo),
+        frequencia = VALUES(frequencia),
+        proximo_envio = IF(VALUES(ativo) = 1,
+          DATE_ADD(NOW(), INTERVAL CASE WHEN VALUES(frequencia) = 'diario' THEN 1 ELSE 7 END DAY), NULL)`,
+    [req.usuarioAutenticado, ativo ? 1 : 0, frequencia, ativo ? 1 : 0, frequencia]);
+    const [rows] = await pool.execute(`SELECT email FROM USUARIO WHERE id_usuario = ?`, [req.usuarioAutenticado]);
+    if (!rows.length) return res.status(404).json({ mensagem: 'Usuário não encontrado.' });
+    return res.json({
+      ativo,
+      frequencia,
+      email: rows[0].email,
+      smtpConfigurado: isMailConfigured(),
+      mensagem: ativo ? 'Envio automático ativado.' : 'Envio automático desativado.',
+    });
+  } catch (error) {
+    console.error('[RELATORIOS] Falha ao salvar automação:', error.message || 'erro desconhecido');
+    return res.status(503).json({ mensagem: 'Não foi possível salvar a automação. Verifique se a migração do banco foi aplicada.' });
+  }
+});
 
 const verificarBancoDisponivel = async () => {
   try {
@@ -480,4 +538,5 @@ const port = Number(process.env.PORT) || 5000;
 
 app.listen(port, () => {
   console.log(`🚀 Servidor AgroVia rodando em http://localhost:${port}`);
+  startReportScheduler();
 });

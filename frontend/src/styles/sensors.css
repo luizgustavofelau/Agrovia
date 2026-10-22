@@ -102,7 +102,7 @@
 
 .sensor-reading-value {
   color: #254e2c !important;
-  font-family: 'Fraunces', serif;
+  font-family: inherit;
   font-weight: 500 !important;
 }
 

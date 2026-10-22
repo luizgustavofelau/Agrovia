@@ -83,6 +83,8 @@ O endpoint `GET http://localhost:5000/api/health` retorna se a API está ativa, 
 
 A migração `003_soft_delete_fazendas.sql` adiciona `FAZENDAS.deleted_at`; `004_soft_delete_dispositivos.sql` adiciona exclusão lógica de dispositivos e um índice que permite reutilizar um MAC somente depois que o registro anterior for removido. Execute `npm run db:migrate` após atualizar o projeto. Fazendas e dispositivos removidos deixam de aparecer nas listagens, mas não são apagados imediatamente do banco. Remover um dispositivo também marca seu status como desconectado; a aplicação ainda não possui ingestão nem histórico de telemetria. O login emite um token com validade de 8 horas para autorizar exclusões. Defina `AUTH_TOKEN_SECRET` com um valor aleatório forte no ambiente; se omitido, a API usa um segredo temporário e invalida as sessões ao reiniciar.
 
+A migração `005_relatorios_automaticos.sql` cria as preferências de envio. Para ativar relatórios por e-mail, configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS` e, opcionalmente, `SMTP_FROM` em `backend/.env`; em seguida, reinicie a API e aplique as migrações. O usuário opta pelo envio semanal ou diário na seção Relatórios. O agendador verifica os envios a cada minuto e envia o primeiro relatório após o intervalo escolhido. Atualmente o e-mail resume fazendas, culturas cadastradas e conexão dos dispositivos. Leituras e condições da plantação não estão integradas, então o relatório deixa essa limitação explícita e não gera diagnóstico agronômico.
+
 ### 5) Iniciar backend e frontend
 
 Mantenha cada servidor em um terminal separado, ambos abertos:
@@ -117,5 +119,6 @@ Essa credencial só é aceita enquanto o banco estiver indisponível. Com MySQL 
 - O backend depende de um banco MySQL funcional para uso em produção real.
 - Os cadastros fallback são voláteis e vêm marcados como demonstração; não são persistidos no MySQL.
 - O schema atual armazena usuários, culturas, fazendas e dispositivos. Ainda não há tabelas/rotas de leituras, histórico, alertas de telemetria ou eventos de irrigação.
+- Os relatórios automáticos enviam apenas os dados operacionais existentes. Para incluir condições reais da plantação, ainda é necessário implementar a ingestão e o armazenamento das leituras dos sensores.
 - As telas de cadastro de campos e dispositivos usam as rotas já existentes. Leituras em tempo real dependem de integração de sensores que ainda precisa ser implementada.
 - O projeto foi pensado para apresentação acadêmica e evolução contínua para TCC.

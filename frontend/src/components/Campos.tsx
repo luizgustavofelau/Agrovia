@@ -153,8 +153,8 @@ export default function Campos() {
           {campos.length > 0 && (
             <div className="field-summary" aria-label="Resumo das propriedades">
               <div><span>Propriedades</span><strong>{campos.length}</strong></div>
-              <div><span>Área informada</span><strong>{areaKnownCount ? formatarHa(areaTotal) : "Não informada"}</strong></div>
-              <div><span>Talhões informados</span><strong>{talhoesKnownCount ? talhoesTotal : "Não informado"}</strong></div>
+              <div><span>Área informada</span><strong>{areaKnownCount ? formatarHa(areaTotal) : <span className="field-placeholder">Não informada</span>}</strong></div>
+              <div><span>Talhões informados</span><strong>{talhoesKnownCount ? talhoesTotal : <span className="field-placeholder">Não informado</span>}</strong></div>
             </div>
           )}
           {!carregando && !erro && campos.length === 0 && (

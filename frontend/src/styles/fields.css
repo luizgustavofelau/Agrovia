@@ -70,6 +70,10 @@
   white-space: nowrap;
 }
 
+.field-placeholder {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
 .field-grid {
   gap: 16px;
 }

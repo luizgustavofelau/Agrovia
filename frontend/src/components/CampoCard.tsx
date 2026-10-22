@@ -81,11 +81,15 @@ export default function CampoCard({ campo, onSolicitarExclusao }: Props) {
       <dl className="field-metrics mt-5 grid grid-cols-2 gap-3">
         <div className="rounded-2xl bg-[#f4f1ea] px-4 py-3">
           <dt className="flex items-center gap-1.5 text-xs text-stone-500"><Ruler size={13} aria-hidden="true" />Área total</dt>
-          <dd className="mt-1 text-sm font-semibold text-[#1f3a2b]">{formatarHa(campo.areaHa)}</dd>
+          <dd className="mt-1 text-sm font-semibold text-[#1f3a2b]">
+            {campo.areaHa == null ? <span className="field-placeholder">Não informado</span> : formatarHa(campo.areaHa)}
+          </dd>
         </div>
         <div className="rounded-2xl bg-[#f4f1ea] px-4 py-3">
           <dt className="flex items-center gap-1.5 text-xs text-stone-500"><LayoutGrid size={13} aria-hidden="true" />Talhões</dt>
-          <dd className="mt-1 text-xl font-semibold text-[#1f3a2b]">{campo.talhoes ?? "Não informado"}</dd>
+          <dd className="mt-1 text-xl font-semibold text-[#1f3a2b]">
+            {campo.talhoes == null ? <span className="field-placeholder">Não informado</span> : campo.talhoes}
+          </dd>
         </div>
       </dl>
 

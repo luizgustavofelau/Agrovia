@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AlertCircle, BookOpen, LogOut, Printer, RefreshCw, Sprout, Wifi } from "lucide-react";
 import Sidebar from "./Sidebar";
 import AgriculturalStudies from "./AgriculturalStudies";
+import ReportAutomation from "./ReportAutomation";
 import "../styles/dashboard.css";
 import "../styles/dashboard-mobile.css";
 import "../styles/dashboard-alerts.css";
@@ -279,16 +280,17 @@ const Dashboard: React.FC = () => {
             <header className="reports-intro">
               <p className="section-kicker">Histórico operacional</p>
               <h2>Relatórios</h2>
-              <p className="report-lead">Os relatórios de desempenho ficam disponíveis quando houver leituras e operações registradas para o período.</p>
+              <p className="report-lead">Configure o recebimento periódico de um resumo da sua operação. Análises da plantação dependem da integração de telemetria.</p>
             </header>
             <div className="dashboard-empty-state">
               <AlertCircle size={22} aria-hidden="true" />
               <div>
-                <strong>Não há séries históricas conectadas</strong>
-                <p>A API atual fornece cadastros de campos e dispositivos, mas ainda não fornece leituras, consumo ou eventos de irrigação.</p>
+                <strong>Leituras da plantação ainda não disponíveis</strong>
+                <p>O envio automático pode resumir propriedades e conexão dos dispositivos. A API ainda não fornece leituras de solo ou eventos para gerar uma análise real das condições da lavoura.</p>
               </div>
               <Link to="/painel">Voltar ao painel</Link>
             </div>
+            <ReportAutomation />
           </section>
         ) : activeNav === "Alertas" ? (
           <section className="dashboard-reports-panel">
