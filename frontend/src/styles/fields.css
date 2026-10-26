@@ -39,41 +39,9 @@
   box-shadow: 0 4px 12px rgba(42, 54, 35, 0.035);
 }
 
-.field-summary {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  margin: 0 0 18px;
-}
-
-.field-summary > div {
-  min-height: 70px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 13px 16px;
-  background: #fffefa;
-  border: 1px solid #e1e3d8;
-  border-radius: 12px;
-  box-shadow: 0 5px 16px rgba(46, 61, 38, 0.035);
-}
-
-.field-summary span {
-  color: #687263;
-  font-size: 11px;
-}
-
-.field-summary strong {
-  color: #254e2c;
-  font: 500 21px 'Fraunces', serif;
-  white-space: nowrap;
-}
-
 .field-placeholder {
   font-family: 'Plus Jakarta Sans', sans-serif;
 }
-
 .field-grid {
   gap: 16px;
 }
@@ -164,13 +132,5 @@
     justify-content: center;
     gap: 3px;
     padding: 10px;
-  }
-
-  .field-summary span {
-    font-size: 9px;
-  }
-
-  .field-summary strong {
-    font-size: 18px;
   }
 }

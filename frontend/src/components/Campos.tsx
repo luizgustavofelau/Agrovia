@@ -153,9 +153,22 @@ export default function Campos() {
         <>
           {campos.length > 0 && (
             <div className="field-summary" aria-label="Resumo das propriedades">
-              <div><span>Propriedades</span><strong>{campos.length}</strong></div>
-              <div><span>Área informada</span><strong>{areaKnownCount ? formatarHa(areaTotal) : <span className="field-placeholder">Não informada</span>}</strong></div>
-              <div><span>Talhões informados</span><strong>{talhoesKnownCount ? talhoesTotal : <span className="field-placeholder">Não informado</span>}</strong></div>
+              <div>
+                <span className="metric-label">Propriedades</span>
+                <strong className="metric-value">{campos.length}</strong>
+              </div>
+              <div>
+                <span className="metric-label">Área informada</span>
+                <strong className={`metric-value${areaKnownCount ? "" : " metric-value--text"}`}>
+                  {areaKnownCount ? formatarHa(areaTotal) : "Não informada"}
+                </strong>
+              </div>
+              <div>
+                <span className="metric-label">Talhões informados</span>
+                <strong className={`metric-value${talhoesKnownCount ? "" : " metric-value--text"}`}>
+                  {talhoesKnownCount ? talhoesTotal : "Não informado"}
+                </strong>
+              </div>
             </div>
           )}
           {!carregando && !erro && campos.length === 0 && (

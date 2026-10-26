@@ -39,44 +39,6 @@
   box-shadow: 0 4px 12px rgba(42, 54, 35, 0.035);
 }
 
-.sensor-summary {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  margin: 0 0 18px;
-}
-
-.sensor-summary > div {
-  min-height: 70px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 13px 16px;
-  background: #fffefa;
-  border: 1px solid #e1e3d8;
-  border-radius: 12px;
-  box-shadow: 0 5px 16px rgba(46, 61, 38, 0.035);
-}
-
-.sensor-summary span {
-  color: #687263;
-  font-size: 11px;
-}
-
-.sensor-summary strong {
-  color: #254e2c;
-  font: 500 21px 'Fraunces', serif;
-  white-space: nowrap;
-}
-
-.sensor-summary .sensor-summary-unavailable {
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 650;
-  white-space: normal;
-}
-
 .sensor-grid {
   gap: 16px;
 }
@@ -217,11 +179,11 @@
     padding: 10px;
   }
 
-  .sensor-summary span {
+  .sensor-summary .metric-label {
     font-size: 9px;
   }
 
-  .sensor-summary strong {
+  .sensor-summary .metric-value {
     font-size: 18px;
   }
 
@@ -230,11 +192,6 @@
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-  }
-
-  .sensor-summary > div:last-child .sensor-summary-unavailable {
-    font-size: 12px;
-    text-align: right;
   }
 
   .sensor-account-link {

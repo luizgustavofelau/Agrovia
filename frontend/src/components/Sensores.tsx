@@ -106,9 +106,18 @@ export default function Sensores() {
         <>
           {dispositivos.length > 0 && (
             <div className="sensor-summary" aria-label="Resumo dos dispositivos">
-              <div><span>Dispositivos registrados</span><strong>{indicadores.registrados}</strong></div>
-              <div><span>Conectados</span><strong>{indicadores.conectados}</strong></div>
-              <div><span>Leituras de umidade</span><strong className="sensor-summary-unavailable">Não disponíveis</strong></div>
+              <div>
+                <span className="metric-label">Dispositivos registrados</span>
+                <strong className="metric-value">{indicadores.registrados}</strong>
+              </div>
+              <div>
+                <span className="metric-label">Conectados</span>
+                <strong className="metric-value">{indicadores.conectados}</strong>
+              </div>
+              <div>
+                <span className="metric-label">Leituras de umidade</span>
+                <strong className="metric-value metric-value--text">Não disponíveis</strong>
+              </div>
             </div>
           )}
           <div className="sensor-grid grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
