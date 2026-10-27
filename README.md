@@ -42,7 +42,7 @@ No FileZilla, abra `frontend/dist` e transfira **seu conteúdo**, incluindo `.ht
 | Health Check Path | /health |
 | Auto Deploy | Desativado até concluir testes integrados; depois habilitar conforme decisão do grupo |
 
-Cadastre `NODE_ENV=production`, `DB_HOST`, `DB_PORT=3306` (ou a porta fornecida), `DB_USER`, `DB_PASS`, `DB_NAME`, `AUTH_TOKEN_SECRET` e `FRONTEND_URL`. Preserve `DB_PASS`, nome já usado pelo projeto. `AUTH_TOKEN_SECRET` deve ser aleatório, com pelo menos 32 caracteres; gere com `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` e guarde fora do Git. O Render fornece `PORT`; o servidor escuta em `0.0.0.0`, com 5000 como padrão local. Não é necessário cadastrar PORT manualmente.
+Cadastre `NODE_ENV=production`, `DATABASE_URL`, `AUTH_TOKEN_SECRET` e `FRONTEND_URL`. Use `DATABASE_URL=mysql://usuario:senha@host/nome-do-banco`; a porta padrão é 3306. Se houver porta diferente, use `host:porta`. Codifique caracteres especiais no usuário e na senha (por exemplo, `@` vira `%40`, `#` vira `%23`). Não use https:// na conexão MySQL. `AUTH_TOKEN_SECRET` deve ser aleatório, com pelo menos 32 caracteres; gere com `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` e guarde fora do Git. O Render fornece `PORT`; o servidor escuta em `0.0.0.0`, com 5000 como padrão local. Não é necessário cadastrar PORT manualmente.
 
 `FRONTEND_URL` é a origem institucional HTTPS **sem subpasta nem barra final**. O domínio ainda precisa ser informado. CORS permite essa origem; em desenvolvimento também permite `http://localhost:3000`. Tokens usam cabeçalho, sem dependência de cookies cross-site.
 

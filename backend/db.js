@@ -2,12 +2,10 @@ const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 const mysql = require('mysql2/promise');
 
+const { parseDatabaseUrl } = require('./db-config');
+
 const dbConfig = {
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASS,
-  database: process.env.DB_NAME,
-  port: process.env.DB_PORT ? Number(process.env.DB_PORT) : 3306,
+  ...parseDatabaseUrl(process.env.DATABASE_URL),
   waitForConnections: true,
   connectionLimit: 5,
   queueLimit: 50,

@@ -31,6 +31,8 @@ O código foi preparado, preservando CRA/React, Express e MySQL2. A publicação
 | `.gitignore` | Ignora variantes locais de ambiente; remove referência obsoleta a ORM. |
 | `README.md` | Arquitetura, segurança, banco e configurações exatas de publicação. |
 | `backend/.env.example` | Documenta NODE_ENV, CORS, segredo de sessão e fuso, sem credenciais reais. |
+| `backend/db-config.js` | Valida DATABASE_URL, decodifica credenciais e aplica porta padrão 3306 sem expor a URL em erros. |
+| `backend/test/db-config.test.js` | Testa porta padrão/customizada, caracteres especiais e rejeição segura de URLs inválidas. |
 | `backend/db.js` | Preserva pool MySQL2; limita conexões/fila, define timeout e remove log de configuração. |
 | `backend/hash-passwords.js` | Conversão manual, transacional e opt-in de senhas legadas; não executada. |
 | `backend/migrate.js` | Log de falha sem expor SQL/credenciais. |
@@ -88,7 +90,7 @@ O código foi preparado, preservando CRA/React, Express e MySQL2. A publicação
 
 ## F. MySQL2
 
-Conexão em `backend/db.js`: `mysql2/promise.createPool`, compartilhado. `DB_HOST`, `DB_USER`, `DB_PASS`, `DB_NAME` obrigatórias na produção; `DB_PORT` tem padrão 3306. Pool de cinco conexões, fila máxima 50 e connectTimeout 10s; adequação final ao limite contratado deve ser confirmada, sem mudar permissões.
+Conexão em `backend/db.js`: `mysql2/promise.createPool`, compartilhado. `DATABASE_URL` obrigatória, no formato `mysql://usuario:senha@host/banco`; porta padrão 3306, ou `host:porta` quando necessário. Caracteres especiais de usuário/senha devem ser codificados na URL. Pool de cinco conexões, fila máxima 50 e connectTimeout 10s; adequação final ao limite contratado deve ser confirmada, sem mudar permissões.
 
 Consultas de dados revisadas: parâmetros `?`, sem interpolação de valores de usuário no SQL. SQL dinâmico das migrations usa identificadores fixos, controlados pelo repositório. `pool.execute` faz checkout/release automaticamente. Exclusão de fazenda, migrador e conversor liberam conexões em finally. Há transação com rollback na exclusão e no conversor; o migrador DDL não é transacional e pode aplicar parcialmente em caso de erro, portanto requer revisão manual.
 
@@ -102,11 +104,11 @@ Testes: conexão real não validada (ETIMEDOUT), schema real não consultado, CR
 | --- | --- |
 | Frontend local | `REACT_APP_API_URL=http://localhost:5000` |
 | Frontend produção | `REACT_APP_API_URL=<origem HTTPS real do Render>`; não usar VITE_API_URL, pois não é Vite |
-| Backend local | `NODE_ENV=development`, `PORT=5000`, `DB_HOST`, `DB_PORT=3306`, `DB_USER`, `DB_PASS`, `DB_NAME`, `AUTH_TOKEN_SECRET`, `FRONTEND_URL=http://localhost:3000` |
-| Backend Render | `NODE_ENV=production`, `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASS`, `DB_NAME`, `AUTH_TOKEN_SECRET` forte, `FRONTEND_URL=<origem institucional>`; PORT fornecido pelo Render |
+| Backend local | `NODE_ENV=development`, `PORT=5000`, `DATABASE_URL`, `AUTH_TOKEN_SECRET`, `FRONTEND_URL=http://localhost:3000` |
+| Backend Render | `NODE_ENV=production`, `DATABASE_URL`, `AUTH_TOKEN_SECRET` forte, `FRONTEND_URL=<origem institucional>`; PORT fornecido pelo Render |
 | Backend opcional | `TZ=America/Sao_Paulo`; para relatórios `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` |
 
-Use somente `.env` e `.env.example`. O `.env` existente não foi alterado nem impresso. Não há necessidade de DATABASE_URL nem JWT_SECRET; o projeto usa DB_PASS e AUTH_TOKEN_SECRET.
+Use somente `.env` e `.env.example`. O `.env` existente não foi alterado nem impresso. O projeto agora usa exclusivamente DATABASE_URL para conexão e AUTH_TOKEN_SECRET para sessões; as variáveis DB_HOST/DB_PORT/DB_USER/DB_PASS/DB_NAME não são mais lidas. Atualize também seu .env local.
 
 ## Verificações e checklist
 
@@ -115,7 +117,7 @@ Use somente `.env` e `.env.example`. O `.env` existente não foi alterado nem im
 - [x] Quatro referências de assets em index.html verificadas com subpasta e arquivos existentes; `.htaccess` idêntico ao original; bundle sem API localhost.
 - [x] `npm run preview` iniciou; home, login, painel/campos, conta, imagem e JS/CSS retornaram HTTP 200. Teste HTTP, não validação visual/interativa em navegador.
 - [x] `npm start` iniciou backend na porta de teste 15060 e `/health` retornou status ok; SMTP desativado no teste.
-- [x] `npm test`: dois testes passaram, abrangendo senha válida/inválida, hash inválido, legado bloqueado, health, CORS, 401, 403 e 503 sem banco.
+- [x] `npm test`: quatro testes passaram (incluindo DATABASE_URL), abrangendo senha válida/inválida, hash inválido, legado bloqueado, health, CORS, 401, 403 e 503 sem banco.
 - [x] `npm run db:migrate -- --dry-run`: seis scripts, 65 instruções inspecionadas sem execução.
 - [x] Imports relativos conferidos sem problemas de capitalização; `git diff --check` sem erros.
 - [ ] `npm run test-db`: falhou com EACCES na restrição; nova tentativa autorizada falhou com ETIMEDOUT. SELECT/schema remotos não validados.
@@ -145,7 +147,7 @@ Histórico: varredura heurística de literais em 24 commits locais, com achado e
 
 1. Crie `.env` a partir de `.env.example` **somente se não existir**. Preserve o arquivo existente.
 2. Frontend: `REACT_APP_API_URL=http://localhost:5000`.
-3. Backend: preencha DB_HOST/DB_PORT/DB_USER/DB_PASS/DB_NAME, PORT=5000, NODE_ENV=development, FRONTEND_URL=http://localhost:3000 e AUTH_TOKEN_SECRET aleatório.
+3. Backend: preencha DATABASE_URL, PORT=5000, NODE_ENV=development, FRONTEND_URL=http://localhost:3000 e AUTH_TOKEN_SECRET aleatório.
 4. Instale e execute em terminais separados (comandos PowerShell a partir da raiz):
 
 ```powershell
@@ -175,7 +177,7 @@ Abra `http://localhost:4173/tecti/2026/gpec05/`. O frontend não tinha testes au
 
 ## AMBIENTE 2 — BANCO MYSQL NA HOSTINGER
 
-1. Use host, porta, usuário, senha e banco fornecidos pela instituição; correspondem a DB_HOST, DB_PORT, DB_USER, DB_PASS e DB_NAME no Render.
+1. Use host, porta, usuário, senha e banco fornecidos pela instituição; reúna esses valores em DATABASE_URL no Render.
 2. Confira o schema com `npm run test-db`; revise os SQL 000–005 e a estrutura real.
 3. Após backup e revisão, somente se necessário, aplique manualmente `npm run db:migrate`. Não crie/recrie banco, não altere permissões e não coloque esse comando no startup.
 4. Diagnostique contas legadas com `node hash-passwords.js`. Após revisão e backup, execute manualmente `node hash-passwords.js --apply` para conversão. A auditoria não executou esses comandos sobre dados reais.
@@ -192,7 +194,7 @@ Antes, revise as alterações e faça você mesmo o commit/push para a branch es
 - Runtime: **Node**, engines **24.x**.
 - Build Command: **npm ci**.
 - Start Command: **npm start**.
-- Environment Variables: **NODE_ENV=production, DB_HOST, DB_PORT, DB_USER, DB_PASS, DB_NAME, AUTH_TOKEN_SECRET, FRONTEND_URL**. PORT vem do Render. Opcionais: TZ e SMTP conforme seção G.
+- Environment Variables: **NODE_ENV=production, DATABASE_URL, AUTH_TOKEN_SECRET, FRONTEND_URL**. PORT vem do Render. Opcionais: TZ e SMTP conforme seção G.
 - Health Check Path: **/health**.
 - Auto Deploy: **desativado durante validação inicial**.
 

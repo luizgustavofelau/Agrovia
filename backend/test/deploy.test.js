@@ -19,7 +19,7 @@ test('API: health, CORS, autenticação, isolamento e falha do banco', async (t)
   const server = spawn(process.execPath, ['server.js'], {
     cwd: require('node:path').resolve(__dirname, '..'),
     env: { ...process.env, NODE_ENV: 'production', PORT: '15059',
-      DB_HOST: '127.0.0.1', DB_PORT: '1', DB_USER: 'test', DB_PASS: 'test', DB_NAME: 'test',
+      DATABASE_URL: 'mysql://test:test@127.0.0.1:1/test',
       AUTH_TOKEN_SECRET: secret, FRONTEND_URL: 'https://frontend.example', SMTP_HOST: '', SMTP_USER: '', SMTP_PASS: '' },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
