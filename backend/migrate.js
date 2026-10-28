@@ -1,14 +1,26 @@
 const fs = require('fs/promises');
 const path = require('path');
-const { pool } = require('./db');
+
+function selectMigrations(files, args) {
+  const unknown = args.filter((arg) => arg !== '--dry-run' && !/^--from=\d{3}$/.test(arg));
+  const starts = args.filter((arg) => arg.startsWith('--from='));
+  if (unknown.length || starts.length > 1) throw new Error('MIGRATION_ARGUMENTS');
+  const sorted = files.filter((file) => /^\d+_[a-z0-9_-]+\.sql$/i.test(file)).sort();
+  if (!starts.length) return sorted;
+  const prefix = starts[0].slice('--from='.length) + '_';
+  const index = sorted.findIndex((file) => file.startsWith(prefix));
+  if (index < 0) throw new Error('MIGRATION_NOT_FOUND');
+  return sorted.slice(index);
+}
 
 async function applyMigrations() {
+  let pool;
   let connection;
+  let activeFile;
+  let activeStatement;
   try {
     const migrationDirectory = path.join(__dirname, 'migrations');
-    const migrationFiles = (await fs.readdir(migrationDirectory))
-      .filter((file) => /^\d+_[a-z0-9_-]+\.sql$/i.test(file))
-      .sort((left, right) => left.localeCompare(right, 'en'));
+    const migrationFiles = selectMigrations(await fs.readdir(migrationDirectory), process.argv.slice(2));
 
     const migrations = await Promise.all(migrationFiles.map(async (file) => ({
       file,
@@ -25,20 +37,28 @@ async function applyMigrations() {
       return;
     }
 
+    ({ pool } = require('./db'));
     connection = await pool.getConnection();
     for (const migration of migrations) {
-      for (const statement of migration.statements) await connection.query(statement);
+      activeFile = migration.file;
+      for (const [index, statement] of migration.statements.entries()) {
+        activeStatement = index + 1;
+        await connection.query(statement);
+      }
       console.log(`[MIGRATION] Conferida/aplicada: ${migration.file}`);
     }
 
     console.log('[MIGRATION] Todas as migrações terminaram. Execute npm run test-db para conferir o schema.');
   } catch (error) {
     console.error('[MIGRATION] Falha ao aplicar migrações:', error.code || 'DB_ERROR');
+    if (activeFile) console.error(`[MIGRATION] Arquivo: ${activeFile}, instrução: ${activeStatement}. DDL anterior pode ter sido aplicado; revise antes de repetir.`);
+    else console.error('[MIGRATION] Confira DATABASE_URL e argumentos: --dry-run e/ou --from=NNN.');
     process.exitCode = 1;
   } finally {
     if (connection) connection.release();
-    await pool.end();
+    if (pool) await pool.end();
   }
 }
 
-applyMigrations();
+if (require.main === module) applyMigrations();
+module.exports = { selectMigrations };

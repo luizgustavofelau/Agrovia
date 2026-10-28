@@ -14,6 +14,7 @@
     "start": "node server.js",
     "test-db": "node test-db.js",
     "db:migrate": "node migrate.js",
+    "db:seed": "node seed.js",
     "dev": "node --watch server.js",
     "test": "node --test test/*.test.js"
   },

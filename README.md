@@ -21,7 +21,7 @@ Diretório: `frontend`. Node: `24.x`. Instalação: `npm ci`. Build: `npm run bu
 O caminho público é **`/tecti/2026/gpec05/`**, definido por `homepage` no package.json. BrowserRouter usa `process.env.PUBLIC_URL`, calculado pelo CRA a partir desse caminho. Vite `base` e `VITE_API_URL` não se aplicam: utilize `REACT_APP_API_URL` no único `.env` do frontend. Não coloque segredos nessa variável, pois seu valor entra no JavaScript público.
 
 Local: `REACT_APP_API_URL=http://localhost:5000`.
-Produção: `REACT_APP_API_URL=` seguido da **origem HTTPS real da API Render**, sem `/api` e sem barra final. Essa URL ainda está pendente. Alterar o `.env` exige novo build.
+Produção: `REACT_APP_API_URL=https://agrovia-sboe.onrender.com`, sem `/api` e sem barra final. URL informada pelo responsável nesta revisão. Alterar o `.env` exige novo build. O build rejeita caminhos como `/api`, credenciais, query, fragmento e HTTP remoto, evitando `/api/api/login` e conteúdo misto. HTTP local é permitido para desenvolvimento.
 
 O build exige URL HTTP(S) explícita e sempre gera `dist`. `public/.htaccess` será copiado para `dist/.htaccess`; contém RewriteBase do grupo e fallback de rotas para index.html. Não crie esse arquivo manualmente no FileZilla. Não defina PUBLIC_URL diferente de homepage sem também revisar o fallback Apache.
 
@@ -52,7 +52,7 @@ Opcionais, somente para relatórios: `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `S
 
 ### Banco de dados — MySQL2
 
-As credenciais são as fornecidas pela instituição para o MySQL Hostinger existente. Não crie outro banco e não altere permissões. A conectividade remota continua pendente de teste no Render.
+As credenciais são as fornecidas pela instituição para o MySQL Hostinger existente. Não crie outro banco e não altere permissões. A conexão a partir deste computador foi validada; no Render, /api/health ainda retorna banco indisponível.
 
 Scripts SQL em `backend/migrations`, em ordem:
 
@@ -67,7 +67,7 @@ Scripts SQL em `backend/migrations`, em ordem:
 
 Os nomes de tabelas estão em maiúsculas; respeite exatamente essa capitalização no MySQL/Linux. Os scripts documentam a estrutura esperada, mas não provam que a base remota corresponde a ela. `test-db` consulta SELECT e INFORMATION_SCHEMA. Não exporta dados. A exclusão lógica de fazenda usa transação, rollback e release em finally. Migrador e conversor também liberam conexões; consultas comuns usam o pool diretamente.
 
-Antes de qualquer operação manual: faça backup, confirme o banco e revise as estruturas existentes e os seis SQL. `CREATE TABLE IF NOT EXISTS` não corrige tipos ou índices de tabelas antigas. O script 004 substitui um índice, portanto exige revisão e janela controlada. Não foi executado nesta auditoria.
+Antes de qualquer operação manual: faça backup, confirme o banco e revise as estruturas existentes e os seis SQL. `CREATE TABLE IF NOT EXISTS` não corrige tipos ou índices de tabelas antigas. O script 004 substitui um índice, portanto exige revisão e janela controlada. Não foi executado nesta auditoria. A inspeção atual encontrou 11 colunas ausentes, cobertas pelos scripts 002–005; confira também tipos e índices antes de aplicar qualquer script.
 
 Comandos em `backend`:
 
@@ -89,3 +89,18 @@ O armazenamento local de tokens permanece e exige cuidado com XSS. Limitação d
 Referências: [configuração CRA](https://create-react-app.dev/docs/advanced-configuration/), [deploy CRA](https://create-react-app.dev/docs/deployment/), [Node no Render](https://render.com/docs/node-version), [Web Services Render](https://render.com/docs/web-services).
 
 Veja `AUDITORIA-DEPLOY.md` para resultados, pendências, checklist e instruções operacionais na ordem de publicação.
+
+### Diagnóstico verificado em 28/10/2026
+
+- API pública: `https://agrovia-sboe.onrender.com/health` respondeu 200; `/api/health` respondeu 503 com `database=unavailable`. Isso confirma HTTP ativo, mas não acesso ao MySQL. Não houve alteração no Render ou Hostinger.
+- O `.env` local foi convertido de DB_HOST/DB_USER/DB_PASS/DB_NAME para DATABASE_URL, preservando os dados de conexão e sem expor valores. Foram completadas as variáveis locais ausentes. SELECT remoto funcionou a partir deste computador; a inspeção encontrou 11 colunas ausentes. O Render continua sem conexão.
+- Timeout no log `[DB]` indica que é preciso conferir endpoint MySQL, porta e conectividade com o responsável pela instituição. Não troque permissões ou infraestrutura durante esta preparação. Acesso pelo phpMyAdmin não comprova acesso a partir do Render.
+- `Sessão inválida ou expirada` no login: confira em Network que a URL é exatamente `https://agrovia-sboe.onrender.com/api/login`, método POST. Não inclua `/api` na variável do frontend. O frontend não envia token antigo no login. As variantes com barra final e maiúsculas agora seguem a mesma política de autenticação e propriedade das rotas normais.
+- Testes da configuração do frontend: `node --test scripts/validate-api-origin.test.js`, dentro de `frontend`. Testes da API: `npm test`, dentro de `backend`, com banco propositalmente indisponível; não substituem integração real.
+- A build atual usa a URL real, mas a publicação final depende do banco, contas com hashes e da origem institucional em `FRONTEND_URL`. O domínio institucional continua pendente.
+
+### Migrações adaptadas à base institucional — 28/10/2026
+
+A revisão de metadados confirmou MariaDB 11.8.9, chave USUARIO.id_usuario INT com sinal e índice único legado de MAC chamado mac_address. Os scripts 004 e 005 foram corrigidos para essa estrutura sem alterar as tabelas centrais. O novo índice de MAC ativo é criado antes da remoção do antigo.
+
+Veja [procedimento e validações](backend/migrations/README.md). Para revisar somente os quatro scripts pendentes: `npm run db:migrate -- --dry-run --from=002`, dentro de backend. A aplicação manual após backup usa `npm run db:migrate -- --from=002`. Nenhuma migration foi aplicada nesta revisão; conexão do Render, hashes e teste integrado continuam pendentes.

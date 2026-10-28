@@ -41,9 +41,20 @@ test('API: health, CORS, autenticação, isolamento e falha do banco', async (t)
   const token = payload + '.' + crypto.createHmac('sha256', secret).update(payload).digest('base64url');
   response = await fetch(base + '/api/usuario/2', { headers: { Authorization: `Bearer ${token}` } });
   assert.equal(response.status, 403);
+  for (const path of ['/api/usuario/2/', '/api/USUARIO/2']) {
+    response = await fetch(base + path, { headers: { Authorization: `Bearer ${token}` } });
+    assert.equal(response.status, 403, path);
+  }
   response = await fetch(base + '/api/health');
   assert.equal(response.status, 503);
   response = await fetch(base + '/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'teste@example.com', senha: 'teste' }) });
   assert.equal(response.status, 503);
   assert.deepEqual(await response.json(), { mensagem: 'Banco de dados indisponível.' });
+  for (const path of ['/api/login/', '/api/LOGIN']) {
+    response = await fetch(base + path, { method: 'POST', headers: {
+      'Content-Type': 'application/json', Authorization: 'Bearer invalid.expired',
+    }, body: JSON.stringify({ email: 'teste@example.com', senha: 'teste' }) });
+    assert.equal(response.status, 503, path);
+    assert.deepEqual(await response.json(), { mensagem: 'Banco de dados indisponível.' });
+  }
 });

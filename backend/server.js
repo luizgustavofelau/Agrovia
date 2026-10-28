@@ -170,12 +170,13 @@ const verificarTokenSessao = (req, res, next) => {
 app.get("/health", (_req, res) => res.json({ status: "ok" }));
 // Todas as operações de conta exigem sessão, inclusive leituras e cadastros.
 app.use("/api", (req, res, next) => {
-  if (req.path === "/login" || req.path === "/health") return next();
+  // Express aceita barra final e caminhos sem distinção de maiúsculas.
+  if (/^\/(login|health)\/?$/i.test(req.path)) return next();
   return verificarTokenSessao(req, res, next);
 });
 app.use("/api", (req, res, next) => {
   const requestedId = req.query.id_usuario ?? req.body?.id_usuario;
-  const profile = req.path.match(/^\/usuario\/([^/]+)$/);
+  const profile = req.path.match(/^\/usuario\/([^/]+)\/?$/i);
   if (
     (requestedId !== undefined &&
       Number(requestedId) !== req.usuarioAutenticado) ||
@@ -304,7 +305,8 @@ const verificarBancoDisponivel = async () => {
 app.get("/api/health", async (_req, res) => {
   try {
     await pool.query("SELECT 1 AS ok");
-  } catch (_error) {
+  } catch (error) {
+    console.warn("[DB] Health indisponível:", error.code || "DB_ERROR");
     return res
       .status(503)
       .json({ api: "ok", database: "unavailable", schema: "unknown" });
