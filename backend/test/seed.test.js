@@ -44,6 +44,7 @@ test('seed cria TECNICO com hash compatível com login em produção', async () 
   assert.equal(email, config.email);
   assert.equal(role, 'TECNICO');
   assert.notEqual(hash, config.senha);
+  assert.match(hash, /^\$2b\$12\$/);
   assert.equal(await verifyPassword(config.senha, hash), true);
   assert.equal(pool.state.committed, true);
   assert.equal(pool.state.released, true);

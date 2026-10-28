@@ -1,3 +1,13 @@
+# Atualização de execução e bcrypt — 28/10/2026
+
+Esta atualização prevalece sobre as pendências históricas abaixo. Após autorização do usuário, migrations 002–005 foram aplicadas sem apagar registros, test-db confirmou schema pronto e uma conta TECNICO foi criada por seed transacional. Login HTTPS autorizado no Render retornou 200 com sucesso. O frontend institucional/CORS e CRUD integrados não foram validados.
+
+Implementação local: bcrypt 6 com custo 12, seed e conversor atualizados, preservação de hashes bcrypt/scrypt, atualização automática de scrypt após login válido (até 72 bytes) e proteção contra truncamento UTF-8. A conta existente não foi regravada antes de publicar o novo backend. Foram aprovados 16 testes, incluindo fluxo HTTP de atualização scrypt → bcrypt usando pool de teste, sem banco real.
+
+Arquivos desta mudança: backend/password.js, server.js, hash-passwords.js, seed.js, .env.example, package.json, package-lock.json, test/password.test.js, test/login-bcrypt.test.js, test/seed.test.js e documentação. Nenhum deploy, commit ou push executado.
+
+# Histórico da auditoria anterior
+
 # Auditoria de deploy — Agrovia
 
 Revisão: 28/10/2026. Nenhum deploy, FTP, commit, push, alteração no Render/Hostinger, migration ou escrita no banco real foi realizado.

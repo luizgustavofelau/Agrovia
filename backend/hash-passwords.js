@@ -1,14 +1,15 @@
 // Revisão por padrão. --apply exige execução manual após backup e revisão.
 const { pool } = require('./db');
-const { hashPassword } = require('./password');
+const { hashPassword, isEncodedPassword } = require('./password');
 async function main() {
   let connection;
   try {
     connection = await pool.getConnection();
     await connection.beginTransaction();
     const [users] = await connection.execute('SELECT id_usuario, senha FROM USUARIO FOR UPDATE');
-    const pending = users.filter((user) => !String(user.senha || '').startsWith('scrypt$'));
+    const pending = users.filter((user) => !isEncodedPassword(String(user.senha || '')));
     console.log(`Contas com senha legada: ${pending.length}`);
+    console.log('Hashes bcrypt/scrypt preservados. Scrypt é atualizado após login válido.');
     if (process.argv.includes('--apply')) {
       for (const user of pending) {
         if (!String(user.senha || '').trim()) throw new Error('EMPTY_PASSWORD');

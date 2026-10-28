@@ -1,6 +1,6 @@
 # Migrações da base institucional
 
-Revisão de 28/10/2026, baseada somente em leitura de metadados e contagem agregada de duplicados. Nenhuma migration foi aplicada.
+Atualização de 28/10/2026: após autorização do usuário, migrations 002–005 aplicadas com sucesso e test-db confirmou schema pronto. Nenhum registro apagado. As instruções abaixo documentam o procedimento, não exigem reaplicação. Uma conta TECNICO foi criada pela seed separada e o login remoto autorizado retornou 200.
 
 ## Correções
 

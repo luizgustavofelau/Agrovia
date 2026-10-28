@@ -8,7 +8,7 @@ Plataforma de irrigação e gestão agrícola. Frontend React 18 + TypeScript co
 - `backend/server.js`: rotas `/api/login`, `/api/usuario/:id`, `/api/fazendas`, `/api/culturas`, `/api/dispositivos`, `/api/relatorios/automacao`. Controllers/SQL ficam no próprio servidor, sem camada de models separada.
 - `backend/db.js`: pool único `mysql2/promise`, cinco conexões, fila de até 50, timeout de conexão de 10 segundos; consultas de dados usam parâmetros `?`.
 - Autenticação: token próprio assinado com HMAC-SHA256, validade de oito horas, enviado por `Authorization: Bearer`. Não é JWT. O frontend guarda a sessão no localStorage. Todas as rotas de dados exigem token e os recursos pessoais verificam o proprietário.
-- `backend/password.js`: hashes scrypt. Produção rejeita senhas legadas em texto puro; desenvolvimento ainda as aceita para compatibilidade. O modo de autenticação por conta de demonstração foi removido; banco indisponível retorna 503.
+- `backend/password.js`: bcrypt assíncrono com custo 12 e salt aleatório. Hashes scrypt existentes continuam válidos e são atualizados após login correto, quando a senha cabe no limite de 72 bytes UTF-8. Produção rejeita texto puro; desenvolvimento mantém a compatibilidade legada. O modo de autenticação por conta de demonstração foi removido; banco indisponível retorna 503.
 - `backend/report-scheduler.js`: relatórios opcionais por SMTP; não configura SMTP durante a auditoria. Evita verificações sobrepostas e aguarda o trabalho ativo no encerramento, com limite global de dez segundos.
 - Não há ingestão real de telemetria nem histórico de leituras. Os relatórios usam somente os dados operacionais existentes.
 
@@ -78,7 +78,7 @@ npm run db:migrate -- --dry-run
 
 Somente após revisão e backup, o responsável pode executar manualmente `npm run db:migrate`. Nunca coloque esse comando no build/start do Render.
 
-Para contas legadas, `node hash-passwords.js` informa apenas a contagem de senhas sem prefixo scrypt, sem imprimir valores e sem gravar. Após backup e revisão, `node hash-passwords.js --apply` converte senhas existentes em transação. **Não foi executado durante a auditoria.** Em produção, contas não convertidas não autenticam. Para provisionar contas novas, use o procedimento administrativo da instituição com hash produzido por `hashPassword` de `password.js`. Não existe cadastro público de usuário.
+Para contas legadas, `node hash-passwords.js` informa apenas a contagem de senhas em texto puro (preserva prefixos bcrypt e scrypt), sem imprimir valores e sem gravar. Após backup e revisão, `node hash-passwords.js --apply` converte texto puro para bcrypt em transação; não recalcula hashes já existentes. **Não foi executado durante a auditoria.** Em produção, contas não convertidas não autenticam. Para provisionar contas novas, use o procedimento administrativo da instituição com hash produzido por `hashPassword` de `password.js`. Não existe cadastro público de usuário.
 
 ## Segurança e limitações
 
@@ -103,4 +103,23 @@ Veja `AUDITORIA-DEPLOY.md` para resultados, pendências, checklist e instruçõe
 
 A revisão de metadados confirmou MariaDB 11.8.9, chave USUARIO.id_usuario INT com sinal e índice único legado de MAC chamado mac_address. Os scripts 004 e 005 foram corrigidos para essa estrutura sem alterar as tabelas centrais. O novo índice de MAC ativo é criado antes da remoção do antigo.
 
-Veja [procedimento e validações](backend/migrations/README.md). Para revisar somente os quatro scripts pendentes: `npm run db:migrate -- --dry-run --from=002`, dentro de backend. A aplicação manual após backup usa `npm run db:migrate -- --from=002`. Nenhuma migration foi aplicada nesta revisão; conexão do Render, hashes e teste integrado continuam pendentes.
+Veja [procedimento e validações](backend/migrations/README.md). Para revisar somente os quatro scripts pendentes: `npm run db:migrate -- --dry-run --from=002`, dentro de backend. A aplicação manual após backup usa `npm run db:migrate -- --from=002`. Atualização: migrations 002–005 aplicadas após autorização, schema validado e login da conta TECNICO no Render retornou 200. Teste integrado no frontend e publicação das alterações bcrypt continuam pendentes.
+
+### Senhas bcrypt e seed TECNICO
+
+A dependência bcrypt 6 está em package.json e no lockfile. Instale com npm ci. Novas senhas usam bcrypt, custo 12. Não são necessárias mudanças na coluna senha (VARCHAR(255)).
+
+O limite é 72 bytes UTF-8, não caracteres: a geração rejeita valores maiores e a verificação bcrypt não aceita truncamento. Hashes scrypt com senhas maiores continuam válidos, mas exigem redefinição da senha para migrar. A conversão no login usa UPDATE condicional ao hash anterior para não sobrescrever uma troca concorrente de senha. Não há conversão de scrypt sem conhecer a senha original. Texto puro continua bloqueado em produção. [Limitações da biblioteca bcrypt](https://github.com/kelektiv/node.bcrypt.js#security-issues-and-concerns).
+
+Seed manual: configure SEED_TECNICO_EMAIL, SEED_TECNICO_NOME e SEED_TECNICO_SENHA no backend/.env. A senha da seed deve ter pelo menos 12 caracteres e no máximo 72 bytes, sem espaços nas extremidades. O .env não vai ao Git/FTP nem ao frontend. Não inclua essas variáveis de seed no Render para inicialização automática.
+
+Dentro de backend:
+
+```powershell
+npm run db:seed
+npm run db:seed -- --apply
+```
+
+Sem --apply, a seed apenas consulta. Ao aplicar, cria uma conta TECNICO com hash, em transação. Repetição preserva a conta e a senha existentes; conflito com outro perfil é rejeitado. TECNICO mantém o acesso aos próprios cadastros e não representa um administrador global. Nenhum registro é apagado.
+
+A conta inicial tecnico@agrovia.invalid foi criada na etapa anterior; é um identificador de login reservado, não uma caixa de e-mail real. A senha aleatória está somente em SEED_TECNICO_SENHA no backend/.env local. Essa conta inicialmente recebeu scrypt e migrará para bcrypt após login na versão atualizada. Não foi alterada antecipadamente para preservar acesso à versão já publicada. O login remoto autorizado retornou HTTP 200.

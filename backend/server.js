@@ -4,7 +4,7 @@ require("dotenv").config({ path: path.join(__dirname, ".env") });
 const express = require("express");
 const cors = require("cors");
 const crypto = require("crypto");
-const { verifyPassword } = require("./password");
+const { verifyPassword, hashPassword, canHashWithBcrypt, needsPasswordRehash } = require("./password");
 const { pool } = require("./db");
 const { inspectSchema } = require("./schema-check");
 const {
@@ -893,6 +893,16 @@ app.post("/api/login", async (req, res) => {
       : "";
 
     if (await verifyPassword(senhaNormalizada, senhaBanco, !production)) {
+      if (canHashWithBcrypt(senhaNormalizada) && needsPasswordRehash(senhaBanco)) {
+        const hash = await hashPassword(senhaNormalizada);
+        const [updated] = await pool.execute(
+          "UPDATE USUARIO SET senha = ? WHERE id_usuario = ? AND BINARY senha = ?",
+          [hash, usuarioNoBanco.id_usuario, usuarioNoBanco.senha]
+        );
+        if (!updated.affectedRows) {
+          return res.status(401).json({ sucesso: false, mensagem: "Senha alterada. Entre novamente." });
+        }
+      }
       return res.json({
         sucesso: true,
         accessToken: criarTokenSessao(usuarioNoBanco.id_usuario),

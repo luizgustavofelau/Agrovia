@@ -1,12 +1,12 @@
 const path = require('node:path');
-const { hashPassword } = require('./password');
+const { hashPassword, canHashWithBcrypt } = require('./password');
 
 function seedConfig(env) {
   const email = String(env.SEED_TECNICO_EMAIL || '').trim().toLowerCase();
   const nome = String(env.SEED_TECNICO_NOME || 'Técnico Agrovia').trim();
   const senha = String(env.SEED_TECNICO_SENHA || '');
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 100
-    || !nome || nome.length > 100 || senha.length < 12 || senha.length > 128
+    || !nome || nome.length > 100 || senha.length < 12 || !canHashWithBcrypt(senha)
     || senha !== senha.trim()) {
     throw new Error('SEED_CONFIG_INVALID');
   }
@@ -63,7 +63,7 @@ async function main() {
     const messages = {
       existing: 'Conta TECNICO já existe; senha e dados preservados.',
       pending: 'Diagnóstico: conta TECNICO será criada. Execute com --apply para gravar.',
-      created: 'Conta TECNICO criada com hash scrypt. Acesso configurado no .env local.',
+      created: 'Conta TECNICO criada com hash bcrypt. Acesso configurado no .env local.',
     };
     console.log('[SEED]', messages[status]);
   } catch (error) {
