@@ -36,4 +36,14 @@ async function verifyPassword(password, stored, allowLegacy = false) {
   return timingSafeEqual(key, Buffer.from(parts[2], 'hex'));
 }
 
-module.exports = { hashPassword, verifyPassword, canHashWithBcrypt, isEncodedPassword, needsPasswordRehash };
+const SENHA_MINIMA = 8;
+
+// Regra única para senhas novas (cadastro e redefinição). Retorna a mensagem de erro ou null.
+function validarNovaSenha(senha) {
+  if (typeof senha !== 'string' || senha.length < SENHA_MINIMA || !/[A-Za-zÀ-ÿ]/.test(senha) || !/\d/.test(senha))
+    return `A senha deve ter pelo menos ${SENHA_MINIMA} caracteres, com letras e números.`;
+  if (!canHashWithBcrypt(senha)) return 'A senha é longa demais. Use no máximo 72 bytes.';
+  return null;
+}
+
+module.exports = { hashPassword, verifyPassword, canHashWithBcrypt, isEncodedPassword, needsPasswordRehash, validarNovaSenha };

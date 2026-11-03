@@ -83,6 +83,37 @@
   box-shadow: 0 1px 4px rgba(29, 38, 26, 0.25);
 }
 
+.sensor-irrigate-btn {
+  border: 1px solid rgba(49, 92, 53, 0.25);
+  background: #eef4e7;
+  color: #254e2c;
+  transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+
+.sensor-irrigate-btn:hover {
+  transform: translateY(-1px);
+  border-color: #315c35;
+  background: #e2eed8;
+}
+
+.sensor-sparkline {
+  height: 44px;
+  overflow: visible;
+}
+
+.sensor-sparkline-line {
+  fill: none;
+  stroke: #4c7a3b;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.sensor-sparkline-area {
+  fill: rgba(76, 122, 59, 0.12);
+}
+
 .sensor-metadata {
   border-color: #e6e9df !important;
   color: #687263;

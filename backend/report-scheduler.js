@@ -124,4 +124,4 @@ function startReportScheduler() {
   return async () => { clearInterval(timer); await pending; };
 }
 
-module.exports = { isMailConfigured, startReportScheduler };
+module.exports = { isMailConfigured, startReportScheduler, createTransport };

@@ -43,7 +43,7 @@ export function ConfirmDestructiveDialog({
       className="fixed inset-0 z-50 flex items-center justify-center bg-[#17251b]/55 p-4 backdrop-blur-sm"
       onMouseDown={(event) => event.target === event.currentTarget && !loading && onCancel()}
     >
-      <section
+      <div
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="destructive-title"
@@ -76,7 +76,7 @@ export function ConfirmDestructiveDialog({
             {loading ? "Removendo..." : confirmLabel}
           </button>
         </div>
-      </section>
+      </div>
     </div>
   );
 }

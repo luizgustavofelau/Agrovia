@@ -18,3 +18,14 @@ test('argumento incorreto não pode iniciar migração por engano', () => {
     assert.throws(() => selectMigrations(['002_fazenda_detalhes.sql'], args));
   }
 });
+
+test('comentários das migrações não contêm ponto e vírgula (o executor separa instruções por ele)', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const dir = path.join(__dirname, '..', 'migrations');
+  for (const file of fs.readdirSync(dir).filter((f) => f.endsWith('.sql'))) {
+    fs.readFileSync(path.join(dir, file), 'utf8').split(/\r?\n/).forEach((linha, i) => {
+      assert.ok(!/^\s*--.*;/.test(linha), `${file}:${i + 1} tem ";" em comentário`);
+    });
+  }
+});

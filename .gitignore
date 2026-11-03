@@ -3,13 +3,21 @@ node_modules/
 /.pnp
 .pnp.js
 
-# Environment variables
+# Environment variables (qualquer variante; apenas os modelos .env.example entram no Git)
 .env
-.env.*.local
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
+!.env.example
+
+# Chaves e certificados
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Backups e dumps de banco
+*.sql.gz
+*.dump
+*.bak
 
 # Production builds
 build/
@@ -30,3 +38,11 @@ yarn-error.log*
 Thumbs.db
 .vscode/
 .idea/
+.claude/
+*.swp
+
+# Backups locais do banco (podem conter dados sensíveis)
+backend/backups/
+
+# Configuração do firmware (Wi-Fi e chave do dispositivo)
+firmware/**/config.h

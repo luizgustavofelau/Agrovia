@@ -13,13 +13,19 @@ const REQUIRED_COLUMNS = [
   'DISPOSITIVOS.mac_address', 'DISPOSITIVOS.status_conexao',
   'DISPOSITIVOS.id_fazenda_fk', 'DISPOSITIVOS.id_campo',
   'DISPOSITIVOS.deleted_at', 'DISPOSITIVOS.mac_address_ativo',
+  // Integração IoT (migração 006).
+  'DISPOSITIVOS.chave_hash', 'DISPOSITIVOS.ultima_leitura_umidade', 'DISPOSITIVOS.ultima_atualizacao',
+  'HISTORICO_UMIDADE.id_dispositivo_fk', 'HISTORICO_UMIDADE.valor_umidade', 'HISTORICO_UMIDADE.data_hora',
+  'COMANDOS_IRRIGACAO.id_comando', 'COMANDOS_IRRIGACAO.id_dispositivo_fk', 'COMANDOS_IRRIGACAO.acao',
+  'COMANDOS_IRRIGACAO.duracao_segundos', 'COMANDOS_IRRIGACAO.status', 'COMANDOS_IRRIGACAO.expira_em',
 ];
 
 async function inspectSchema(pool) {
   const [columns] = await pool.query(`SELECT TABLE_NAME, COLUMN_NAME
     FROM INFORMATION_SCHEMA.COLUMNS
     WHERE TABLE_SCHEMA = DATABASE()
-      AND TABLE_NAME IN ('USUARIO', 'CULTURAS', 'FAZENDAS', 'DISPOSITIVOS', 'RELATORIO_AUTOMATICO')`);
+      AND TABLE_NAME IN ('USUARIO', 'CULTURAS', 'FAZENDAS', 'DISPOSITIVOS', 'RELATORIO_AUTOMATICO',
+        'HISTORICO_UMIDADE', 'COMANDOS_IRRIGACAO')`);
   const availableColumns = new Set(columns.map((column) => `${column.TABLE_NAME}.${column.COLUMN_NAME}`));
   const missingColumns = REQUIRED_COLUMNS.filter((column) => !availableColumns.has(column));
   return { ready: missingColumns.length === 0, missingColumns };

@@ -16,7 +16,7 @@ async function testConnection() {
     }
   } catch (error) {
     console.error('Falha ao verificar MySQL/schema:', error.code || 'DB_CONFIG_OR_QUERY_ERROR');
-    console.error('Confira DATABASE_URL e a conectividade a partir do ambiente da API. Não compartilhe credenciais.');
+    console.error('Confira DATABASE_URL (ou DB_HOST/DB_USER/DB_PASS/DB_NAME) e a conectividade a partir do ambiente da API. Não compartilhe credenciais.');
     process.exitCode = 1;
   } finally {
     if (pool) await pool.end();
