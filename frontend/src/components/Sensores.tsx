@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { toast, Toaster } from "sonner";
 import { ConfirmDestructiveDialog } from "./ConfirmDestructiveDialog";
 import { DispositivoCard, type Dispositivo } from "./DispositivoCard";
+import { ChaveDispositivoDialog, IrrigacaoDialog } from "./IrrigacaoDialogs";
 import { listarDispositivos, removerDispositivo } from "../services/dispositivos.api";
 import "../styles/sensors.css";
 
@@ -19,10 +20,25 @@ export default function Sensores() {
   const [alvoRemocao, setAlvoRemocao] = useState<Dispositivo | null>(null);
   const [removendo, setRemovendo] = useState(false);
   const [erroRemocao, setErroRemocao] = useState("");
-  const indicadores = useMemo(() => ({
-    registrados: dispositivos.length,
-    conectados: dispositivos.filter(conectado).length,
-  }), [dispositivos]);
+  const [alvoIrrigacao, setAlvoIrrigacao] = useState<Dispositivo | null>(null);
+  const [alvoChave, setAlvoChave] = useState<Dispositivo | null>(null);
+  const [recarga, setRecarga] = useState(0);
+  const indicadores = useMemo(() => {
+    const comLeitura = dispositivos.filter((d) => d.ultimaUmidade !== null && d.ultimaUmidade !== undefined);
+    return {
+      registrados: dispositivos.length,
+      conectados: dispositivos.filter(conectado).length,
+      umidadeMedia: comLeitura.length
+        ? comLeitura.reduce((total, d) => total + Number(d.ultimaUmidade), 0) / comLeitura.length
+        : null,
+    };
+  }, [dispositivos]);
+
+  // Leituras chegam do aparelho a cada minuto: a lista se atualiza sozinha.
+  useEffect(() => {
+    const timer = window.setInterval(() => setRecarga((n) => n + 1), 30000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     let cancelado = false;
@@ -51,7 +67,7 @@ export default function Sensores() {
     return () => {
       cancelado = true;
     };
-  }, [idUsuario]);
+  }, [idUsuario, recarga]);
 
   async function confirmarRemocao() {
     if (!alvoRemocao) return;
@@ -115,17 +131,25 @@ export default function Sensores() {
                 <strong className="metric-value">{indicadores.conectados}</strong>
               </div>
               <div>
-                <span className="metric-label">Leituras de umidade</span>
-                <strong className="metric-value metric-value--text">Não disponíveis</strong>
+                <span className="metric-label">Umidade média atual</span>
+                {indicadores.umidadeMedia === null
+                  ? <strong className="metric-value metric-value--text">Não disponíveis</strong>
+                  : <strong className="metric-value">{indicadores.umidadeMedia.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%</strong>}
               </div>
             </div>
           )}
           <div className="sensor-grid grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
             {dispositivos.map((device) => (
-              <DispositivoCard key={device.id} dispositivo={device} onSolicitarRemocao={(dispositivo) => {
-                setErroRemocao("");
-                setAlvoRemocao(dispositivo);
-              }} />
+              <DispositivoCard
+                key={device.id}
+                dispositivo={device}
+                onSolicitarRemocao={(dispositivo) => {
+                  setErroRemocao("");
+                  setAlvoRemocao(dispositivo);
+                }}
+                onIrrigar={setAlvoIrrigacao}
+                onGerarChave={setAlvoChave}
+              />
             ))}
             {!erro && dispositivos.length === 0 && <p className="sensor-empty-state" role="status">Nenhum dispositivo registrado. Cadastre um dispositivo na área da Conta.</p>}
             <Link className="sensor-account-link" to="/conta?aba=dispositivos">
@@ -135,6 +159,14 @@ export default function Sensores() {
             </Link>
           </div>
         </>
+      )}
+      {alvoIrrigacao && <IrrigacaoDialog dispositivo={alvoIrrigacao} onFechar={() => setAlvoIrrigacao(null)} />}
+      {alvoChave && (
+        <ChaveDispositivoDialog
+          dispositivo={alvoChave}
+          onFechar={() => setAlvoChave(null)}
+          onGerada={() => setRecarga((n) => n + 1)}
+        />
       )}
       <ConfirmDestructiveDialog
         open={alvoRemocao !== null}

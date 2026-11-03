@@ -1,4 +1,5 @@
 import { API_ORIGIN } from "../services/http";
+import { handleExpiredSession } from "../services/session";
 import React, { FormEvent, useEffect, useState } from "react";
 import axios from "axios";
 import {
@@ -52,6 +53,10 @@ api.interceptors.request.use((config) => {
   const token = localStorage.getItem("accessToken");
   if (token) config.headers.set("Authorization", `Bearer ${token}`);
   return config;
+});
+api.interceptors.response.use(undefined, (error) => {
+  if (axios.isAxiosError(error) && error.response?.status === 401) handleExpiredSession();
+  return Promise.reject(error);
 });
 const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: "perfil", label: "Perfil", icon: User },

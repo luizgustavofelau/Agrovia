@@ -1,10 +1,15 @@
 import { apiFetch } from "../services/http";
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { saveSession } from '../services/session';
+import { EsqueciSenha } from './EsqueciSenha';
 import '../styles/login.css';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const sessaoExpirada = searchParams.get('sessao') === 'expirada';
+  const senhaRedefinida = searchParams.get('senha') === 'redefinida';
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [erro, setErro] = useState('');
@@ -23,18 +28,19 @@ const Login: React.FC = () => {
       });
       if (response.ok) {
         const data = await response.json();
-        console.info('[LOGIN] Acesso autorizado.');
-        localStorage.setItem('accessToken', data.accessToken);
-        localStorage.setItem('usuarioId', String(data.usuario.id));
-        localStorage.setItem('usuarioNome', data.usuario.nome);
-        localStorage.setItem('usuarioLogado', JSON.stringify(data.usuario));
-        navigate('/painel');
+        saveSession(data.accessToken, data.usuario);
+        navigate('/painel', { replace: true });
       } else {
         const dataErro = await response.json().catch(() => ({}));
-        setErro(dataErro.mensagem || 'E-mail ou senha incorretos. Tente novamente.');
+        const mensagens: Record<number, string> = {
+          401: 'E-mail ou senha inválidos.',
+          429: 'Muitas tentativas de login. Aguarde alguns minutos e tente novamente.',
+          503: 'O serviço está temporariamente indisponível. Tente novamente em instantes.',
+        };
+        setErro(dataErro.mensagem || mensagens[response.status] || 'Não foi possível entrar. Tente novamente.');
       }
     } catch {
-      setErro('Servidor não está respondendo. Verifique se o Node.js está rodando.');
+      setErro('Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.');
     } finally {
       setCarregando(false);
     }
@@ -81,10 +87,10 @@ const Login: React.FC = () => {
 
         <div className="login-card">
           <header className="login-header">
-            <div className="login-logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
-              <img src={`${process.env.PUBLIC_URL}/img/logo-agrovia.png`} alt="Agrovia Logo" />
-              AGRO<span>VIA</span>
-            </div>
+            <button type="button" className="login-logo" onClick={() => navigate('/')} aria-label="Voltar para a página inicial">
+              <img src={`${process.env.PUBLIC_URL}/img/logo-agrovia.png`} alt="" />
+              <span className="login-logo-word">AGRO<span>VIA</span></span>
+            </button>
             <h1 className="login-title">Seja bem-vindo</h1>
             <p className="login-subtitle">Entre com suas credenciais para acessar o painel</p>
           </header>
@@ -95,6 +101,8 @@ const Login: React.FC = () => {
               <input
                 id="email"
                 type="email"
+                autoComplete="email"
+                maxLength={100}
                 required
                 placeholder="seu@email.com"
                 value={email}
@@ -107,6 +115,7 @@ const Login: React.FC = () => {
               <input
                 id="senha"
                 type="password"
+                autoComplete="current-password"
                 required
                 placeholder="••••••••"
                 value={senha}
@@ -125,15 +134,23 @@ const Login: React.FC = () => {
               </button>
             </div>
 
-            {mostrarAjudaSenha && (
+            {mostrarAjudaSenha && <EsqueciSenha emailInicial={email} />}
+
+            {senhaRedefinida && !erro && (
               <p className="login-info" role="status">
-                A recuperação de senha ainda não está disponível no modo demonstração. Procure o administrador do sistema.
+                Senha alterada com sucesso. Entre com a nova senha.
+              </p>
+            )}
+
+            {sessaoExpirada && !erro && (
+              <p className="login-info" role="status">
+                Sua sessão expirou. Entre novamente para continuar.
               </p>
             )}
 
             {erro && (
-              <div className="login-error">
-                <span>⚠️</span>
+              <div className="login-error" role="alert">
+                <span aria-hidden="true">⚠️</span>
                 <span>{erro}</span>
               </div>
             )}
@@ -154,6 +171,10 @@ const Login: React.FC = () => {
               )}
             </button>
           </form>
+
+          <p className="login-switch">
+            Ainda não tem conta? <Link to="/cadastro">Criar conta</Link>
+          </p>
 
           <footer className="login-footer">
             © 2026 AgroVia — Tecnologia para o Campo

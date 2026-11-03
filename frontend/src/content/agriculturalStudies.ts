@@ -115,9 +115,24 @@ export const cropStudies: CropStudy[] = [
         practice: "Use este roteiro como apoio para organizar perguntas e dados antes de discutir o manejo com assistência técnica.",
         attention: "Este material é educativo e não substitui recomendação agronômica adaptada à propriedade.",
       },
+      {
+        title: "Parâmetros técnicos de referência",
+        introduction: "Valores publicados pela FAO para orientar o cálculo da demanda de água do milho para grão. Eles servem de ponto de partida e devem ser ajustados com dados da sua região.",
+        sections: [
+          { title: "Demanda de água no ciclo", text: "Um milho para grão de ciclo médio precisa de cerca de 500 a 800 mm de água no ciclo, conforme o clima, sem contar as perdas na condução e na aplicação da água (FAO, Irrigation Water Needs, tabela 14). A mesma tabela classifica o milho com sensibilidade média a alta à seca." },
+          { title: "Coeficiente de cultura (Kc)", text: "FAO-56, tabela 12: Kc inicial 0,30; Kc médio 1,20; Kc final 0,60 a 0,35. O valor final mais alto vale para colheita com grão úmido, e o mais baixo para grão seco no campo. A evapotranspiração da cultura é ETc = Kc × ETo." },
+          { title: "Raízes e esgotamento permitido", text: "FAO-56, tabela 22: profundidade efetiva máxima de raízes de 1,0 a 1,7 m (os valores menores são indicados para programar irrigação) e fração de esgotamento p = 0,55, para ETc em torno de 5 mm/dia." },
+          { title: "Fases mais sensíveis", text: "A FAO indica que o milho tolera relativamente melhor o déficit hídrico nas fases vegetativa e de maturação; florescimento e formação da produção são os períodos de maior atenção. O encharcamento durante o florescimento pode reduzir a produtividade de grãos em 50% ou mais." },
+          { title: "Como usar esses números com o sensor", text: "A água total disponível no perfil é TAW = 1000 × (θcc − θpmp) × Zr, em mm, onde θcc e θpmp são as umidades volumétricas na capacidade de campo e no ponto de murcha e Zr é a profundidade de raízes em metros. A parcela facilmente disponível é RAW = p × TAW. Na prática, a irrigação costuma ser planejada para repor a água antes que o esgotamento ultrapasse RAW (FAO-56, equações 82 e 83)." },
+        ],
+        practice: "Para o sensor, defina a profundidade de instalação dentro da zona de raízes ativa e registre a umidade correspondente à capacidade de campo e ao limite de RAW do seu solo; esses dois pontos viram os limiares de alerta da Agrovia.",
+        attention: "Valores de referência internacionais (FAO-56) e de pesquisa nacional. São médias para planejamento: cultivar, clima, solo e sistema de irrigação mudam os números. Use dados locais e orientação de um responsável técnico antes de definir lâminas e turnos de rega.",
+      },
     ],
     references: [
       { title: "Milho - Árvore do Conhecimento Ageitec", institution: "Embrapa", url: "https://www.embrapa.br/agencia-de-informacao-tecnologica/cultivos/milho" },
+      { title: "Crop evapotranspiration — Guidelines for computing crop water requirements (Irrigation and Drainage Paper 56, tabelas 12 e 22)", institution: "FAO", url: "https://www.fao.org/4/x0490e/x0490e00.htm" },
+      { title: "Irrigation Water Management — Irrigation Water Needs (manual de treinamento nº 3, capítulo 3, tabela 14)", institution: "FAO", url: "https://www.fao.org/4/s2022e/s2022e07.htm" },
     ],
   },
   {
@@ -200,9 +215,24 @@ export const cropStudies: CropStudy[] = [
         practice: "Prepare histórico da área, análise de solo e registros de clima para orientar conversas com assistência técnica.",
         attention: "Conteúdo educativo: recomendações dependem da cultivar, região, solo, clima e sistema de produção.",
       },
+      {
+        title: "Parâmetros técnicos de referência",
+        introduction: "Parâmetros de referência da FAO e da Embrapa Soja para a demanda de água da soja. A duração do ciclo e a cultivar alteram bastante esses valores.",
+        sections: [
+          { title: "Demanda de água no ciclo", text: "Para obter o máximo rendimento, a soja precisa de cerca de 450 a 800 mm de água por ciclo, conforme clima, manejo e duração do ciclo (dados da Embrapa Soja)." },
+          { title: "Coeficiente de cultura (Kc)", text: "FAO-56, tabela 12: Kc inicial 0,40; Kc médio 1,15; Kc final 0,50. A evapotranspiração da cultura é ETc = Kc × ETo." },
+          { title: "Raízes e esgotamento permitido", text: "FAO-56, tabela 22: profundidade efetiva máxima de raízes de 0,6 a 1,3 m e fração de esgotamento p = 0,50, para ETc em torno de 5 mm/dia." },
+          { title: "Fases mais sensíveis", text: "Dois períodos são críticos: germinação e emergência, quando tanto a falta quanto o excesso de água prejudicam o estabelecimento e a uniformidade do estande; e floração e enchimento de grãos, quando a falta de água pode causar queda de folhas, flores e vagens e reduzir muito a produtividade." },
+          { title: "Como usar esses números com o sensor", text: "A água total disponível no perfil é TAW = 1000 × (θcc − θpmp) × Zr, em mm, onde θcc e θpmp são as umidades volumétricas na capacidade de campo e no ponto de murcha e Zr é a profundidade de raízes em metros. A parcela facilmente disponível é RAW = p × TAW. Na prática, a irrigação costuma ser planejada para repor a água antes que o esgotamento ultrapasse RAW (FAO-56, equações 82 e 83)." },
+        ],
+        practice: "Concentre o acompanhamento diário das leituras na semeadura e entre o florescimento e o enchimento de grãos; fora dessas janelas, a frequência pode ser menor sem perder a tendência.",
+        attention: "Valores de referência internacionais (FAO-56) e de pesquisa nacional. São médias para planejamento: cultivar, clima, solo e sistema de irrigação mudam os números. Use dados locais e orientação de um responsável técnico antes de definir lâminas e turnos de rega.",
+      },
     ],
     references: [
       { title: "Soja - Árvore do Conhecimento Ageitec", institution: "Embrapa", url: "https://www.embrapa.br/agencia-de-informacao-tecnologica/cultivos/soja" },
+      { title: "Crop evapotranspiration — Guidelines for computing crop water requirements (Irrigation and Drainage Paper 56, tabelas 12 e 22)", institution: "FAO", url: "https://www.fao.org/4/x0490e/x0490e00.htm" },
+      { title: "Necessidade hídrica e déficit hídrico na soja (repositório Alice)", institution: "Embrapa Soja", url: "https://www.alice.cnptia.embrapa.br/alice/bitstream/doc/930297/1/ID33364.pdf" },
     ],
   },
   {
@@ -287,9 +317,24 @@ export const cropStudies: CropStudy[] = [
         practice: "Organize registros por talhão e por corte para tornar comparações entre safras mais úteis.",
         attention: "Material educativo; decisões de irrigação e fertirrigação exigem avaliação da propriedade e das normas vigentes.",
       },
+      {
+        title: "Parâmetros técnicos de referência",
+        introduction: "Parâmetros de referência da FAO para a cana-de-açúcar. O ciclo longo e os cortes sucessivos fazem com que a demanda mude bastante entre cana-planta e soqueira.",
+        sections: [
+          { title: "Demanda de água no ciclo", text: "A FAO indica uma necessidade de cerca de 1.500 a 2.500 mm de água distribuídos ao longo do ciclo e classifica a cana com alta sensibilidade à seca (Irrigation Water Needs, tabela 14). O ciclo costuma durar de 15 a 16 meses e pode variar de cerca de 9 a 24 meses conforme o local. A evapotranspiração no período de crescimento fica em torno de 5 a 6 mm por dia." },
+          { title: "Coeficiente de cultura (Kc)", text: "FAO-56, tabela 12: Kc inicial 0,40; Kc médio 1,25; Kc final 0,75. A evapotranspiração da cultura é ETc = Kc × ETo." },
+          { title: "Raízes e esgotamento permitido", text: "FAO-56, tabela 22: profundidade efetiva máxima de raízes de 1,2 a 2,0 m e fração de esgotamento p = 0,65, para ETc em torno de 5 mm/dia. A FAO relata que, nas fases vegetativa e de formação da produção, até 65% da água disponível pode ser consumida sem perda séria de produtividade." },
+          { title: "Fases mais sensíveis", text: "A falta de água no estabelecimento e no início do perfilhamento reduz a produtividade mais do que a falta nas fases finais. Na maturação, ao contrário, a FAO recomenda umidade baixa no solo, o que favorece o acúmulo de sacarose." },
+          { title: "Como usar esses números com o sensor", text: "A água total disponível no perfil é TAW = 1000 × (θcc − θpmp) × Zr, em mm, onde θcc e θpmp são as umidades volumétricas na capacidade de campo e no ponto de murcha e Zr é a profundidade de raízes em metros. A parcela facilmente disponível é RAW = p × TAW. Na prática, a irrigação costuma ser planejada para repor a água antes que o esgotamento ultrapasse RAW (FAO-56, equações 82 e 83)." },
+        ],
+        practice: "Configure limiares diferentes por fase: mais rigorosos no estabelecimento e na rebrota da soqueira, e um limite de umidade máxima na maturação para não irrigar quando o objetivo é concentrar açúcar.",
+        attention: "Valores de referência internacionais (FAO-56) e de pesquisa nacional. São médias para planejamento: cultivar, clima, solo e sistema de irrigação mudam os números. Use dados locais e orientação de um responsável técnico antes de definir lâminas e turnos de rega.",
+      },
     ],
     references: [
       { title: "Cana-de-açúcar - Árvore do Conhecimento Ageitec", institution: "Embrapa", url: "https://www.embrapa.br/agencia-de-informacao-tecnologica/cultivos/cana-de-acucar" },
+      { title: "Crop evapotranspiration — Guidelines for computing crop water requirements (Irrigation and Drainage Paper 56, tabelas 12 e 22)", institution: "FAO", url: "https://www.fao.org/4/x0490e/x0490e00.htm" },
+      { title: "Irrigation Water Management — Irrigation Water Needs (manual de treinamento nº 3, capítulo 3, tabela 14)", institution: "FAO", url: "https://www.fao.org/4/s2022e/s2022e07.htm" },
     ],
   },
   {
@@ -374,9 +419,24 @@ export const cropStudies: CropStudy[] = [
         practice: "Organize um caderno anual por talhão e conecte leituras a floradas, colheita, poda e operações.",
         attention: "Material educativo; consulte recomendações oficiais e assistência técnica para decisões específicas do cafezal.",
       },
+      {
+        title: "Parâmetros técnicos de referência",
+        introduction: "Parâmetros de referência da FAO e da Embrapa Café para o cafeeiro arábica. Por ser perene, os números valem para lavouras formadas e mudam com a idade e a cobertura do solo.",
+        sections: [
+          { title: "Chuva anual adequada", text: "Precipitações entre 1.200 e 1.800 mm por ano são consideradas boas para o café arábica, e a distribuição das chuvas ao longo do ano importa tanto quanto o total (Embrapa Café, condições agrometeorológicas)." },
+          { title: "Coeficiente de cultura (Kc)", text: "FAO-56, tabela 12: com solo descoberto nas entrelinhas, Kc inicial 0,90, médio 0,95 e final 0,95; com plantas daninhas ou cobertura vegetal nas entrelinhas, 1,05, 1,10 e 1,10. A cobertura da entrelinha aumenta o consumo de água do sistema." },
+          { title: "Raízes e esgotamento permitido", text: "FAO-56, tabela 22: profundidade efetiva máxima de raízes de 0,9 a 1,5 m e fração de esgotamento p = 0,40, para ETc em torno de 5 mm/dia. É a cultura mais sensível ao esgotamento entre as cinco desta biblioteca." },
+          { title: "Fases mais sensíveis", text: "Déficits hídricos nas fases de florada e de enchimento de grãos já foram associados a perdas de produtividade em regiões produtoras do Sudeste. Temperaturas elevadas na época da florada também aumentam o risco de abortamento floral." },
+          { title: "Como usar esses números com o sensor", text: "A água total disponível no perfil é TAW = 1000 × (θcc − θpmp) × Zr, em mm, onde θcc e θpmp são as umidades volumétricas na capacidade de campo e no ponto de murcha e Zr é a profundidade de raízes em metros. A parcela facilmente disponível é RAW = p × TAW. Na prática, a irrigação costuma ser planejada para repor a água antes que o esgotamento ultrapasse RAW (FAO-56, equações 82 e 83)." },
+        ],
+        practice: "Antes e durante a florada, acompanhe as leituras com mais frequência e relacione cada florada registrada com a umidade do solo dos dias anteriores.",
+        attention: "Valores de referência internacionais (FAO-56) e de pesquisa nacional. São médias para planejamento: cultivar, clima, solo e sistema de irrigação mudam os números. Use dados locais e orientação de um responsável técnico antes de definir lâminas e turnos de rega.",
+      },
     ],
     references: [
       { title: "Publicações - Embrapa Café", institution: "Embrapa Café", url: "https://www.embrapa.br/cafe/publicacoes" },
+      { title: "Crop evapotranspiration — Guidelines for computing crop water requirements (Irrigation and Drainage Paper 56, tabelas 12 e 22)", institution: "FAO", url: "https://www.fao.org/4/x0490e/x0490e00.htm" },
+      { title: "Condições agrometeorológicas para o cafeeiro arábica", institution: "Embrapa Café", url: "https://www.alice.cnptia.embrapa.br/alice/bitstream/doc/880139/1/condicoesagrometeorologicas.pdf" },
     ],
   },
   {
@@ -459,9 +519,25 @@ export const cropStudies: CropStudy[] = [
         practice: "Mantenha um registro simples por data e talhão para apoiar avaliação da safra e planejamento da próxima semeadura.",
         attention: "Material educativo; consulte recomendações oficiais e assistência técnica adaptada à sua região.",
       },
+      {
+        title: "Parâmetros técnicos de referência",
+        introduction: "Parâmetros de referência da FAO e de pesquisas nacionais para o feijoeiro comum. O ciclo curto torna cada fase rápida e exige decisões ágeis.",
+        sections: [
+          { title: "Demanda de água no ciclo", text: "A FAO estima de 300 a 500 mm de água por ciclo para o feijão, com o limite inferior para ciclos curtos e o superior para ciclos longos (Irrigation Water Needs, tabela 14). A floração é o período de maior consumo de água pela cultura, segundo a Embrapa Arroz e Feijão." },
+          { title: "Coeficiente de cultura (Kc)", text: "FAO-56, tabela 12 (feijão seco): Kc inicial 0,40; Kc médio 1,15; Kc final 0,35. A evapotranspiração da cultura é ETc = Kc × ETo." },
+          { title: "Raízes e esgotamento permitido", text: "FAO-56, tabela 22: profundidade efetiva máxima de raízes de 0,6 a 0,9 m e fração de esgotamento p = 0,45, para ETc em torno de 5 mm/dia. O sistema radicular raso deixa pouca reserva de água no perfil." },
+          { title: "Fases mais sensíveis", text: "O período mais crítico para o déficit hídrico vai do início do florescimento ao início do enchimento de vagens, coincidindo com a fase de maior consumo de água." },
+          { title: "Como usar esses números com o sensor", text: "A água total disponível no perfil é TAW = 1000 × (θcc − θpmp) × Zr, em mm, onde θcc e θpmp são as umidades volumétricas na capacidade de campo e no ponto de murcha e Zr é a profundidade de raízes em metros. A parcela facilmente disponível é RAW = p × TAW. Na prática, a irrigação costuma ser planejada para repor a água antes que o esgotamento ultrapasse RAW (FAO-56, equações 82 e 83)." },
+        ],
+        practice: "Como as raízes são rasas, instale o sensor na camada superficial efetiva (geralmente nos primeiros 20 a 30 cm) e acompanhe as leituras diariamente a partir do início do florescimento.",
+        attention: "Valores de referência internacionais (FAO-56) e de pesquisa nacional. São médias para planejamento: cultivar, clima, solo e sistema de irrigação mudam os números. Use dados locais e orientação de um responsável técnico antes de definir lâminas e turnos de rega.",
+      },
     ],
     references: [
+      { title: "Irrigation Water Management — Irrigation Water Needs (manual de treinamento nº 3, capítulo 3, tabela 14)", institution: "FAO", url: "https://www.fao.org/4/s2022e/s2022e07.htm" },
       { title: "Feijão - Árvore do Conhecimento Ageitec", institution: "Embrapa", url: "https://www.embrapa.br/agencia-de-informacao-tecnologica/cultivos/feijao" },
+      { title: "Crop evapotranspiration — Guidelines for computing crop water requirements (Irrigation and Drainage Paper 56, tabelas 12 e 22)", institution: "FAO", url: "https://www.fao.org/4/x0490e/x0490e00.htm" },
+      { title: "Evapotranspiração da cultura do feijão", institution: "UNESP Ilha Solteira", url: "https://www.feis.unesp.br/Home/departamentos/fitossanidadeengenhariaruralesolos715/irrigacao5868/etc_feijao_sp.pdf" },
     ],
   },
 ];

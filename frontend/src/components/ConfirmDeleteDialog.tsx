@@ -32,7 +32,7 @@ export function ConfirmDeleteDialog({ open, nomeFazenda, loading, error, onCance
       className="fixed inset-0 z-50 flex items-center justify-center bg-[#17251b]/55 p-4 backdrop-blur-sm"
       onMouseDown={(event) => event.target === event.currentTarget && !loading && onCancel()}
     >
-      <section
+      <div
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="delete-farm-title"
@@ -67,7 +67,7 @@ export function ConfirmDeleteDialog({ open, nomeFazenda, loading, error, onCance
             {loading ? "Excluindo..." : "Confirmar exclusão"}
           </button>
         </div>
-      </section>
+      </div>
     </div>
   );
 }

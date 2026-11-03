@@ -15,7 +15,7 @@ test('login atualiza scrypt para bcrypt e autentica novamente sem expor hash', a
     let stored = process.env.TEST_PASSWORD_HASH;
     pool.query = async () => [[{ ok: 1 }]];
     pool.execute = async (sql, values) => {
-      if (sql.startsWith('SELECT * FROM USUARIO')) return [[{
+      if (sql.includes('FROM USUARIO WHERE email = ?')) return [[{
         id_usuario: 1, nome: 'Teste', email: 'teste@example.invalid', senha: stored, tipo_usuario: 'TECNICO'
       }]];
       if (sql.startsWith('UPDATE USUARIO SET senha')) {
@@ -52,7 +52,9 @@ test('login atualiza scrypt para bcrypt e autentica novamente sem expor hash', a
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email: 'teste@example.invalid', senha }),
   });
-  assert.equal((await login('senha-incorreta')).status, 401);
+  const wrong = await login('senha-incorreta');
+  assert.equal(wrong.status, 401);
+  assert.equal((await wrong.json()).mensagem, 'E-mail ou senha inválidos.');
   assert.equal(upgrades.length, 0);
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const response = await login(password);

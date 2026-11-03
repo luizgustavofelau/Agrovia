@@ -1,22 +1,27 @@
 const path = require("path");
-require("dotenv").config({ path: path.join(__dirname, ".env") });
+require("dotenv").config({ path: path.join(__dirname, ".env"), quiet: true });
 
 const express = require("express");
 const cors = require("cors");
 const crypto = require("crypto");
-const { verifyPassword, hashPassword, canHashWithBcrypt, needsPasswordRehash } = require("./password");
+const { verifyPassword, hashPassword, canHashWithBcrypt, needsPasswordRehash, validarNovaSenha } = require("./password");
+const { hasDatabaseConfig } = require("./db-config");
 const { pool } = require("./db");
 const { inspectSchema } = require("./schema-check");
+const { createLoginLimiter } = require("./login-limiter");
+const { createIotRoutes, ONLINE_JANELA_SEGUNDOS } = require("./iot");
+const { createPasswordResetRoutes } = require("./senha-reset");
 const {
   isMailConfigured,
-  startReportScheduler
+  startReportScheduler,
+  createTransport
 } = require("./report-scheduler");
 
 const app = express();
 const production = process.env.NODE_ENV === "production";
 if (production) {
-  const required = ["DATABASE_URL", "AUTH_TOKEN_SECRET", "FRONTEND_URL"];
-  if (required.some((key) => !process.env[key]))
+  const required = ["AUTH_TOKEN_SECRET", "FRONTEND_URL"];
+  if (required.some((key) => !process.env[key]) || !hasDatabaseConfig())
     throw new Error("Configure as variáveis obrigatórias do backend.");
   if (process.env.AUTH_TOKEN_SECRET.length < 32)
     throw new Error("AUTH_TOKEN_SECRET deve ter pelo menos 32 caracteres.");
@@ -32,82 +37,44 @@ const allowedOrigins = new Set(
     Boolean
   )
 );
+
+app.disable("x-powered-by");
+// O Render encaminha as requisições por um proxy; o IP real é usado no limite de login.
+if (production) app.set("trust proxy", 1);
+app.use((_req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("Referrer-Policy", "no-referrer");
+  res.setHeader("Cross-Origin-Resource-Policy", "same-site");
+  if (production)
+    res.setHeader("Strict-Transport-Security", "max-age=15552000; includeSubDomains");
+  next();
+});
 app.use(
   cors({
     origin(origin, callback) {
       callback(null, !origin || allowedOrigins.has(origin));
-    },
-    exposedHeaders: ["X-Data-Source"]
+    }
   })
 );
-app.use(express.json());
+app.use(express.json({ limit: "20kb" }));
+app.use("/api", (_req, res, next) => {
+  res.setHeader("Cache-Control", "no-store");
+  next();
+});
 
-const FALLBACK_USUARIOS = [];
-
-const FALLBACK_FAZENDAS = [
-  {
-    id: 1,
-    id_usuario: 1,
-    nome: "Fazenda Vale Verde",
-    localizacao: "São José do Rio Preto - SP",
-    cultura: "Soja"
-  },
-  {
-    id: 2,
-    id_usuario: 1,
-    nome: "Lote Estrela",
-    localizacao: "Bauru - SP",
-    cultura: "Milho"
-  }
-];
-
-const FALLBACK_CULTURAS = [
-  {
-    id: 1,
-    nome: "Soja",
-    descricao: "Cultura de alta produtividade para clima temperado.",
-    umidadeMin: 40,
-    umidadeMax: 65
-  },
-  {
-    id: 2,
-    nome: "Milho",
-    descricao: "Ajuste ideal para irrigação em estágios de desenvolvimento.",
-    umidadeMin: 35,
-    umidadeMax: 60
-  },
-  {
-    id: 3,
-    nome: "Café",
-    descricao:
-      "Requer monitoramento mais frequente em regiões de maior elevação.",
-    umidadeMin: 45,
-    umidadeMax: 70
-  }
-];
-
-const FALLBACK_DISPOSITIVOS = [
-  {
-    id: 1,
-    id_usuario: 1,
-    nome: "ESP32-01",
-    mac: "A0:B7:65:12:33:AA",
-    online: true,
-    id_fazenda: 1,
-    id_campo: 1,
-    fazenda: "Fazenda Vale Verde"
-  },
-  {
-    id: 2,
-    id_usuario: 1,
-    nome: "ESP32-02",
-    mac: "A0:B7:65:12:33:BB",
-    online: false,
-    id_fazenda: 2,
-    id_campo: 2,
-    fazenda: "Lote Estrela"
-  }
-];
+// Limites das colunas da base institucional (sql_mode não estrito trunca sem avisar).
+const LIMITES = {
+  nomeUsuario: 100,
+  email: 100,
+  telefone: 20,
+  nomeFazenda: 100,
+  localizacao: 255,
+  observacoes: 300,
+  nomeCultura: 50,
+  descricaoCultura: 2000,
+  nomeDispositivo: 100
+};
 
 const SESSION_SECRET =
   process.env.AUTH_TOKEN_SECRET || crypto.randomBytes(32).toString("hex");
@@ -168,10 +135,18 @@ const verificarTokenSessao = (req, res, next) => {
 };
 
 app.get("/health", (_req, res) => res.json({ status: "ok" }));
+// Este servidor só atende a API; o site é publicado pelo frontend.
+app.get("/", (_req, res) =>
+  res.json({ servico: "API Agrovia", status: "ok", site: frontendOrigin || null })
+);
 // Todas as operações de conta exigem sessão, inclusive leituras e cadastros.
 app.use("/api", (req, res, next) => {
   // Express aceita barra final e caminhos sem distinção de maiúsculas.
-  if (/^\/(login|health)\/?$/i.test(req.path)) return next();
+  if (/^\/(login|cadastro|health)\/?$/i.test(req.path)) return next();
+  // O ESP32 se autentica pela chave do dispositivo (X-Device-Key), não por sessão.
+  if (/^\/iot\//i.test(req.path)) return next();
+  // Recuperação de senha: quem esqueceu a senha ainda não tem sessão.
+  if (/^\/senha\/(esqueci|validar|redefinir)\/?$/i.test(req.path)) return next();
   return verificarTokenSessao(req, res, next);
 });
 app.use("/api", (req, res, next) => {
@@ -187,7 +162,38 @@ app.use("/api", (req, res, next) => {
   next();
 });
 
-app.get("/api/relatorios/automacao", verificarTokenSessao, async (req, res) => {
+// Falhas de rede/credencial do MySQL indicam indisponibilidade, não erro do cliente.
+const DB_UNAVAILABLE_CODES = new Set([
+  "ECONNREFUSED",
+  "ECONNRESET",
+  "ETIMEDOUT",
+  "ENOTFOUND",
+  "EHOSTUNREACH",
+  "EAI_AGAIN",
+  "PROTOCOL_CONNECTION_LOST",
+  "PROTOCOL_SEQUENCE_TIMEOUT",
+  "ER_ACCESS_DENIED_ERROR",
+  "ER_DBACCESS_DENIED_ERROR",
+  "ER_CON_COUNT_ERROR",
+  "ER_TOO_MANY_USER_CONNECTIONS",
+  "ER_USER_LIMIT_REACHED",
+  "POOL_CLOSED"
+]);
+const bancoIndisponivel = (error) =>
+  DB_UNAVAILABLE_CODES.has(error?.code) || error?.status === 503;
+const respostaBancoIndisponivel = (res) =>
+  res.status(503).json({ mensagem: "Banco de dados indisponível." });
+
+const texto = (valor) =>
+  valor === undefined || valor === null ? "" : String(valor).trim();
+const textoOpcional = (valor) => texto(valor) || null;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MAC_PATTERN = /^[0-9A-F]{2}([:-]?)(?:[0-9A-F]{2}\1){4}[0-9A-F]{2}$/i;
+const normalizarMac = (valor) =>
+  texto(valor).replace(/[:-]/g, "").toUpperCase().match(/.{2}/g)?.join(":") || "";
+const idPositivo = (valor) => /^\d+$/.test(String(valor)) && Number(valor) >= 1;
+
+app.get("/api/relatorios/automacao", async (req, res) => {
   try {
     const [rows] = await pool.execute(
       `SELECT u.email, r.ativo, r.frequencia,
@@ -213,6 +219,7 @@ app.get("/api/relatorios/automacao", verificarTokenSessao, async (req, res) => {
       "[RELATORIOS] Falha ao carregar automação:",
       error.code || "DB_ERROR"
     );
+    if (bancoIndisponivel(error)) return respostaBancoIndisponivel(res);
     return res
       .status(503)
       .json({
@@ -222,7 +229,7 @@ app.get("/api/relatorios/automacao", verificarTokenSessao, async (req, res) => {
   }
 });
 
-app.put("/api/relatorios/automacao", verificarTokenSessao, async (req, res) => {
+app.put("/api/relatorios/automacao", async (req, res) => {
   const { ativo, frequencia } = req.body;
   if (
     typeof ativo !== "boolean" ||
@@ -244,21 +251,22 @@ app.put("/api/relatorios/automacao", verificarTokenSessao, async (req, res) => {
   }
 
   try {
+    // O intervalo é calculado aqui: comparar o parâmetro com um texto dentro do SQL
+    // gera ER_CANT_AGGREGATE_2COLLATIONS no MariaDB da instituição.
     await pool.execute(
       `INSERT INTO RELATORIO_AUTOMATICO
         (id_usuario_fk, ativo, frequencia, proximo_envio)
-      VALUES (?, ?, ?, IF(? = 1, DATE_ADD(NOW(), INTERVAL CASE WHEN ? = 'diario' THEN 1 ELSE 7 END DAY), NULL))
+      VALUES (?, ?, ?, IF(? = 1, DATE_ADD(NOW(), INTERVAL ? DAY), NULL))
       ON DUPLICATE KEY UPDATE
         ativo = VALUES(ativo),
         frequencia = VALUES(frequencia),
-        proximo_envio = IF(VALUES(ativo) = 1,
-          DATE_ADD(NOW(), INTERVAL CASE WHEN VALUES(frequencia) = 'diario' THEN 1 ELSE 7 END DAY), NULL)`,
+        proximo_envio = VALUES(proximo_envio)`,
       [
         req.usuarioAutenticado,
         ativo ? 1 : 0,
         frequencia,
         ativo ? 1 : 0,
-        frequencia
+        frequencia === "diario" ? 1 : 7
       ]
     );
     const [rows] = await pool.execute(
@@ -281,6 +289,7 @@ app.put("/api/relatorios/automacao", verificarTokenSessao, async (req, res) => {
       "[RELATORIOS] Falha ao salvar automação:",
       error.code || "DB_ERROR"
     );
+    if (bancoIndisponivel(error)) return respostaBancoIndisponivel(res);
     return res
       .status(503)
       .json({
@@ -289,18 +298,6 @@ app.put("/api/relatorios/automacao", verificarTokenSessao, async (req, res) => {
       });
   }
 });
-
-const verificarBancoDisponivel = async () => {
-  try {
-    await pool.query("SELECT 1 AS ok");
-    return true;
-  } catch (error) {
-    console.warn("[DB] Banco indisponível:", error.code || "DB_ERROR");
-    const unavailable = new Error("Banco indisponível");
-    unavailable.status = 503;
-    throw unavailable;
-  }
-};
 
 app.get("/api/health", async (_req, res) => {
   try {
@@ -329,19 +326,9 @@ app.get("/api/health", async (_req, res) => {
 
 const normalizarEmail = (valor = "") => String(valor).trim().toLowerCase();
 
-const localizarUsuarioFallback = (email, senha) => {
-  const emailNormalizado = normalizarEmail(email);
-  const senhaNormalizada = String(senha || "").trim();
-
-  return FALLBACK_USUARIOS.find(
-    (usuario) =>
-      normalizarEmail(usuario.email) === emailNormalizado &&
-      String(usuario.senha).trim() === senhaNormalizada
-  );
-};
-
 const contaError = (res, error) => {
   console.error("[CONTA]", error.code || "DB_ERROR");
+  if (bancoIndisponivel(error)) return respostaBancoIndisponivel(res);
   if (error.code === "ER_DUP_ENTRY")
     return res
       .status(409)
@@ -350,32 +337,20 @@ const contaError = (res, error) => {
     return res
       .status(400)
       .json({ mensagem: "A fazenda ou o campo informado não existe." });
+  if (error.code === "ER_DATA_TOO_LONG")
+    return res
+      .status(400)
+      .json({ mensagem: "Um dos campos excede o tamanho permitido." });
   return res
     .status(500)
     .json({ mensagem: "Erro interno ao acessar os dados da conta." });
 };
 
 app.get("/api/usuario/:id", async (req, res) => {
-  if (!(await verificarBancoDisponivel())) {
-    res.setHeader("X-Data-Source", "demo");
-    const usuario = FALLBACK_USUARIOS.find(
-      (item) => String(item.id_usuario) === String(req.params.id)
-    );
-    if (!usuario)
-      return res.status(404).json({ mensagem: "Usuário não encontrado." });
-    return res.json({
-      id_usuario: usuario.id_usuario,
-      nome: usuario.nome,
-      email: usuario.email,
-      telefone: usuario.telefone,
-      tipo_usuario: usuario.tipo_usuario
-    });
-  }
-
   try {
     const [rows] = await pool.execute(
       "SELECT id_usuario, nome, email, telefone, tipo_usuario FROM USUARIO WHERE id_usuario = ?",
-      [req.params.id]
+      [req.usuarioAutenticado]
     );
     if (!rows.length)
       return res.status(404).json({ mensagem: "Usuário não encontrado." });
@@ -386,40 +361,34 @@ app.get("/api/usuario/:id", async (req, res) => {
 });
 
 app.put("/api/usuario/:id", async (req, res) => {
-  const { nome, telefone, email } = req.body;
+  const nome = texto(req.body.nome);
+  const email = normalizarEmail(req.body.email);
+  const telefone = textoOpcional(req.body.telefone);
   if (!nome || !email)
     return res
       .status(400)
       .json({ mensagem: "Nome e e-mail são obrigatórios." });
-
-  if (!(await verificarBancoDisponivel())) {
-    res.setHeader("X-Data-Source", "demo");
-    const usuarioAtual = FALLBACK_USUARIOS.find(
-      (item) => String(item.id_usuario) === String(req.params.id)
-    );
-    if (!usuarioAtual)
-      return res.status(404).json({ mensagem: "Usuário não encontrado." });
-    const usuarioAtualizado = {
-      id_usuario: usuarioAtual.id_usuario,
-      nome: nome.trim(),
-      email: email.trim(),
-      telefone: telefone || usuarioAtual.telefone,
-      tipo_usuario: usuarioAtual.tipo_usuario
-    };
-    FALLBACK_USUARIOS[0] = { ...FALLBACK_USUARIOS[0], ...usuarioAtualizado };
-    return res.json(usuarioAtualizado);
-  }
+  if (nome.length > LIMITES.nomeUsuario)
+    return res
+      .status(400)
+      .json({ mensagem: `O nome deve ter no máximo ${LIMITES.nomeUsuario} caracteres.` });
+  if (email.length > LIMITES.email || !EMAIL_PATTERN.test(email))
+    return res.status(400).json({ mensagem: "Informe um e-mail válido." });
+  if (telefone && telefone.length > LIMITES.telefone)
+    return res
+      .status(400)
+      .json({ mensagem: `O telefone deve ter no máximo ${LIMITES.telefone} caracteres.` });
 
   try {
     const [result] = await pool.execute(
       "UPDATE USUARIO SET nome = ?, telefone = ?, email = ? WHERE id_usuario = ?",
-      [nome.trim(), telefone || null, email.trim(), req.params.id]
+      [nome, telefone, email, req.usuarioAutenticado]
     );
     if (!result.affectedRows)
       return res.status(404).json({ mensagem: "Usuário não encontrado." });
     const [rows] = await pool.execute(
       "SELECT id_usuario, nome, email, telefone, tipo_usuario FROM USUARIO WHERE id_usuario = ?",
-      [req.params.id]
+      [req.usuarioAutenticado]
     );
     return res.json(rows[0]);
   } catch (error) {
@@ -427,28 +396,20 @@ app.put("/api/usuario/:id", async (req, res) => {
   }
 });
 
-app.get("/api/fazendas", async (req, res) => {
-  const { id_usuario } = req.query;
-  if (!id_usuario)
-    return res.status(400).json({ mensagem: "id_usuario é obrigatório." });
+const SELECT_FAZENDA = `SELECT f.id_fazenda AS id, f.nome_fazenda AS nome, f.localizacao,
+      f.area_ha AS areaHa, f.qtd_talhoes AS talhoes, f.observacoes,
+      f.id_cultura_fk, c.nome_cultura AS cultura
+      FROM FAZENDAS f LEFT JOIN CULTURAS c ON c.id_cultura = f.id_cultura_fk`;
 
-  if (!(await verificarBancoDisponivel())) {
-    res.setHeader("X-Data-Source", "demo");
-    return res.json(
-      FALLBACK_FAZENDAS.filter(
-        (fazenda) => String(fazenda.id_usuario) === String(id_usuario)
-      ).map(({ id_usuario: _idUsuario, ...fazenda }) => fazenda)
-    );
-  }
+app.get("/api/fazendas", async (req, res) => {
+  if (!req.query.id_usuario)
+    return res.status(400).json({ mensagem: "id_usuario é obrigatório." });
 
   try {
     const [rows] = await pool.execute(
-      `SELECT f.id_fazenda AS id, f.nome_fazenda AS nome, f.localizacao,
-      f.area_ha AS areaHa, f.qtd_talhoes AS talhoes, f.observacoes,
-      f.id_cultura_fk, c.nome_cultura AS cultura
-      FROM FAZENDAS f LEFT JOIN CULTURAS c ON c.id_cultura = f.id_cultura_fk
+      `${SELECT_FAZENDA}
       WHERE f.id_usuario_fk = ? AND f.deleted_at IS NULL ORDER BY f.nome_fazenda`,
-      [id_usuario]
+      [req.usuarioAutenticado]
     );
     return res.json(rows);
   } catch (error) {
@@ -457,20 +418,23 @@ app.get("/api/fazendas", async (req, res) => {
 });
 
 app.post("/api/fazendas", async (req, res) => {
-  const {
-    nome_fazenda,
-    localizacao,
-    id_usuario,
-    id_cultura,
-    cultura,
-    area_ha,
-    qtd_talhoes,
-    observacoes
-  } = req.body;
-  if (!nome_fazenda || !id_usuario)
+  const { id_usuario, id_cultura, cultura, area_ha, qtd_talhoes } = req.body;
+  const nome = texto(req.body.nome_fazenda);
+  const localizacao = textoOpcional(req.body.localizacao);
+  if (!nome || !id_usuario)
     return res
       .status(400)
       .json({ mensagem: "nome_fazenda e id_usuario são obrigatórios." });
+  if (nome.length > LIMITES.nomeFazenda)
+    return res
+      .status(400)
+      .json({ mensagem: `O nome da fazenda deve ter no máximo ${LIMITES.nomeFazenda} caracteres.` });
+  if (localizacao && localizacao.length > LIMITES.localizacao)
+    return res
+      .status(400)
+      .json({ mensagem: `A localização deve ter no máximo ${LIMITES.localizacao} caracteres.` });
+  if (id_cultura !== undefined && id_cultura !== null && id_cultura !== "" && !idPositivo(id_cultura))
+    return res.status(400).json({ mensagem: "Cultura inválida." });
 
   const area =
     area_ha === undefined || area_ha === null || area_ha === ""
@@ -480,126 +444,68 @@ app.post("/api/fazendas", async (req, res) => {
     qtd_talhoes === undefined || qtd_talhoes === null || qtd_talhoes === ""
       ? null
       : Number(qtd_talhoes);
-  const notas =
-    observacoes == null || observacoes === ""
-      ? null
-      : String(observacoes).trim();
-  if (area !== null && (!Number.isFinite(area) || area <= 0))
+  const notas = textoOpcional(req.body.observacoes);
+  if (area !== null && (!Number.isFinite(area) || area <= 0 || area >= 1e10))
     return res
       .status(400)
       .json({ mensagem: "A área deve ser um número maior que zero." });
-  if (talhoes !== null && (!Number.isInteger(talhoes) || talhoes < 1))
+  if (talhoes !== null && (!Number.isInteger(talhoes) || talhoes < 1 || talhoes > 100000))
     return res
       .status(400)
       .json({
         mensagem: "A quantidade de talhões deve ser um inteiro maior que zero."
       });
-  if (notas && notas.length > 300)
+  if (notas && notas.length > LIMITES.observacoes)
     return res
       .status(400)
-      .json({ mensagem: "As observações devem ter no máximo 300 caracteres." });
-
-  if (!(await verificarBancoDisponivel())) {
-    const culturaFallback = id_cultura
-      ? FALLBACK_CULTURAS.find((item) => String(item.id) === String(id_cultura))
-          ?.nome || `Cultura ${id_cultura}`
-      : FALLBACK_CULTURAS.find(
-          (item) =>
-            item.nome.toLowerCase() ===
-            String(cultura || "")
-              .trim()
-              .toLowerCase()
-        )?.nome ||
-        cultura ||
-        "Sem cultura definida";
-    const novaFazenda = {
-      id:
-        FALLBACK_FAZENDAS.reduce(
-          (maiorId, fazenda) => Math.max(maiorId, Number(fazenda.id) || 0),
-          0
-        ) + 1,
-      id_usuario: Number(id_usuario),
-      nome: nome_fazenda.trim(),
-      localizacao: localizacao || "Localização não informada",
-      cultura: culturaFallback,
-      areaHa: area,
-      talhoes,
-      observacoes: notas
-    };
-    FALLBACK_FAZENDAS.push(novaFazenda);
-    res.setHeader("X-Data-Source", "demo");
-    const { id_usuario: _idUsuario, ...fazendaPublica } = novaFazenda;
-    return res.status(201).json(fazendaPublica);
-  }
+      .json({ mensagem: `As observações devem ter no máximo ${LIMITES.observacoes} caracteres.` });
 
   try {
-    let culturaId = id_cultura || null;
-    if (!culturaId && cultura) {
-      const [culturas] = await pool.execute(
-        "SELECT id_cultura FROM CULTURAS WHERE LOWER(nome_cultura) = ?",
-        [String(cultura).trim().toLowerCase()]
-      );
-      if (!culturas.length)
+    let culturaId = id_cultura ? Number(id_cultura) : null;
+    const nomeCultura = texto(cultura);
+    if (!culturaId && nomeCultura) {
+      if (nomeCultura.length > LIMITES.nomeCultura)
         return res
           .status(400)
-          .json({ mensagem: "A cultura informada não está cadastrada." });
-      culturaId = culturas[0].id_cultura;
+          .json({ mensagem: `O nome da cultura deve ter no máximo ${LIMITES.nomeCultura} caracteres.` });
+      // A collation da coluna já compara sem diferenciar maiúsculas.
+      const [culturas] = await pool.execute(
+        "SELECT id_cultura FROM CULTURAS WHERE nome_cultura = ? LIMIT 1",
+        [nomeCultura]
+      );
+      if (culturas.length) {
+        culturaId = culturas[0].id_cultura;
+      } else {
+        // O formulário de fazenda envia a cultura pelo nome (lista fixa ou "Outra"):
+        // ela é registrada sem limiares de umidade, que podem ser definidos depois.
+        const [novaCultura] = await pool.execute(
+          "INSERT INTO CULTURAS (nome_cultura) VALUES (?)",
+          [nomeCultura]
+        );
+        culturaId = novaCultura.insertId;
+      }
     }
     const [result] = await pool.execute(
       `INSERT INTO FAZENDAS
       (nome_fazenda, localizacao, id_usuario_fk, id_cultura_fk, area_ha, qtd_talhoes, observacoes)
       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [
-        nome_fazenda.trim(),
-        localizacao || null,
-        id_usuario,
-        culturaId,
-        area,
-        talhoes,
-        notas
-      ]
+      [nome, localizacao, req.usuarioAutenticado, culturaId, area, talhoes, notas]
     );
-    const [rows] = await pool.execute(
-      `SELECT f.id_fazenda AS id, f.nome_fazenda AS nome, f.localizacao,
-      f.area_ha AS areaHa, f.qtd_talhoes AS talhoes, f.observacoes,
-      f.id_cultura_fk, c.nome_cultura AS cultura
-      FROM FAZENDAS f LEFT JOIN CULTURAS c ON c.id_cultura = f.id_cultura_fk
-      WHERE f.id_fazenda = ?`,
-      [result.insertId]
-    );
+    const [rows] = await pool.execute(`${SELECT_FAZENDA} WHERE f.id_fazenda = ?`, [
+      result.insertId
+    ]);
     return res.status(201).json(rows[0]);
   } catch (error) {
     return contaError(res, error);
   }
 });
 
-app.delete("/api/fazendas/:id", verificarTokenSessao, async (req, res) => {
+app.delete("/api/fazendas/:id", async (req, res) => {
   const idFazenda = String(req.params.id);
-  if (!/^\d+$/.test(idFazenda) || Number(idFazenda) < 1) {
+  if (!idPositivo(idFazenda)) {
     return res
       .status(400)
       .json({ mensagem: "Identificador de fazenda inválido." });
-  }
-
-  if (!(await verificarBancoDisponivel())) {
-    const index = FALLBACK_FAZENDAS.findIndex(
-      (fazenda) =>
-        String(fazenda.id) === idFazenda &&
-        fazenda.id_usuario === req.usuarioAutenticado
-    );
-    if (index < 0)
-      return res.status(404).json({ mensagem: "Propriedade não encontrada." });
-    FALLBACK_FAZENDAS.splice(index, 1);
-    for (
-      let dispositivo = FALLBACK_DISPOSITIVOS.length - 1;
-      dispositivo >= 0;
-      dispositivo -= 1
-    ) {
-      if (String(FALLBACK_DISPOSITIVOS[dispositivo].id_fazenda) === idFazenda)
-        FALLBACK_DISPOSITIVOS.splice(dispositivo, 1);
-    }
-    res.setHeader("X-Data-Source", "demo");
-    return res.status(204).end();
   }
 
   let connection;
@@ -630,11 +536,6 @@ app.delete("/api/fazendas/:id", verificarTokenSessao, async (req, res) => {
 });
 
 app.get("/api/culturas", async (_req, res) => {
-  if (!(await verificarBancoDisponivel())) {
-    res.setHeader("X-Data-Source", "demo");
-    return res.json(FALLBACK_CULTURAS);
-  }
-
   try {
     const [rows] =
       await pool.execute(`SELECT id_cultura AS id, nome_cultura AS nome, descricao_tecnica AS descricao,
@@ -646,44 +547,49 @@ app.get("/api/culturas", async (_req, res) => {
 });
 
 app.post("/api/culturas", async (req, res) => {
-  const { nome_cultura, descricao_tecnica, umidade_minima, umidade_maxima } =
-    req.body;
+  const nome = texto(req.body.nome_cultura);
+  const descricao = textoOpcional(req.body.descricao_tecnica);
+  const { umidade_minima, umidade_maxima } = req.body;
   if (
-    !nome_cultura ||
+    !nome ||
     umidade_minima === undefined ||
-    umidade_maxima === undefined
+    umidade_minima === "" ||
+    umidade_maxima === undefined ||
+    umidade_maxima === ""
   )
     return res
       .status(400)
       .json({ mensagem: "Nome e limiares de umidade são obrigatórios." });
-  if (Number(umidade_minima) > Number(umidade_maxima))
+  const minima = Number(umidade_minima);
+  const maxima = Number(umidade_maxima);
+  if (![minima, maxima].every((valor) => Number.isFinite(valor) && valor >= 0 && valor <= 100))
+    return res
+      .status(400)
+      .json({ mensagem: "Os limiares de umidade devem estar entre 0 e 100%." });
+  if (minima > maxima)
     return res
       .status(400)
       .json({ mensagem: "A umidade mínima não pode ser maior que a máxima." });
-
-  if (!(await verificarBancoDisponivel())) {
-    res.setHeader("X-Data-Source", "demo");
-    const novaCultura = {
-      id: FALLBACK_CULTURAS.length + 1,
-      nome: nome_cultura.trim(),
-      descricao:
-        descricao_tecnica || "Cultura cadastrada em modo de demonstração.",
-      umidadeMin: Number(umidade_minima),
-      umidadeMax: Number(umidade_maxima)
-    };
-    FALLBACK_CULTURAS.push(novaCultura);
-    return res.status(201).json(novaCultura);
-  }
+  if (nome.length > LIMITES.nomeCultura)
+    return res
+      .status(400)
+      .json({ mensagem: `O nome da cultura deve ter no máximo ${LIMITES.nomeCultura} caracteres.` });
+  if (descricao && descricao.length > LIMITES.descricaoCultura)
+    return res
+      .status(400)
+      .json({ mensagem: `A descrição deve ter no máximo ${LIMITES.descricaoCultura} caracteres.` });
 
   try {
+    // A tabela institucional não tem índice único no nome; evita duplicatas pela API.
+    const [existentes] = await pool.execute(
+      "SELECT id_cultura FROM CULTURAS WHERE nome_cultura = ? LIMIT 1",
+      [nome]
+    );
+    if (existentes.length)
+      return res.status(409).json({ mensagem: "Esta cultura já está cadastrada." });
     const [result] = await pool.execute(
       "INSERT INTO CULTURAS (nome_cultura, descricao_tecnica, umidade_ideal_min, umidade_ideal_max) VALUES (?, ?, ?, ?)",
-      [
-        nome_cultura.trim(),
-        descricao_tecnica || null,
-        umidade_minima,
-        umidade_maxima
-      ]
+      [nome, descricao, minima, maxima]
     );
     const [rows] = await pool.execute(
       "SELECT id_cultura AS id, nome_cultura AS nome, descricao_tecnica AS descricao, umidade_ideal_min AS umidadeMin, umidade_ideal_max AS umidadeMax FROM CULTURAS WHERE id_cultura = ?",
@@ -696,36 +602,43 @@ app.post("/api/culturas", async (req, res) => {
 });
 
 app.get("/api/dispositivos", async (req, res) => {
-  const { id_usuario } = req.query;
-  if (!id_usuario)
+  if (!req.query.id_usuario)
     return res.status(400).json({ mensagem: "id_usuario é obrigatório." });
 
-  if (!(await verificarBancoDisponivel())) {
-    res.setHeader("X-Data-Source", "demo");
-    return res.json(
-      FALLBACK_DISPOSITIVOS.filter(
-        (item) =>
-          String(item.id_usuario) === String(id_usuario) && !item.deleted_at
-      ).map(({ id_usuario: _idUsuario, ...item }) => ({
-        ...item,
-        talhaoVinculado: item.fazenda,
-        status: item.online ? "ON" : "OFF"
-      }))
+  // Último contato = leitura mais recente no histórico. DISPOSITIVOS.ultima_atualizacao não
+  // serve: na base institucional ela tem ON UPDATE CURRENT_TIMESTAMP e muda a cada edição da linha.
+  const listarDispositivos = (comChave) =>
+    pool.execute(
+      `SELECT x.*, x.ultimaAtualizacao IS NOT NULL
+        AND x.ultimaAtualizacao >= NOW() - INTERVAL ${ONLINE_JANELA_SEGUNDOS} SECOND AS conectado
+      FROM (
+        SELECT d.id_dispositivo AS id, d.nome_dispositivo AS nome, d.mac_address AS mac,
+        d.id_fazenda_fk AS id_fazenda, d.id_campo, f.nome_fazenda AS fazenda,
+        d.ultima_leitura_umidade AS ultimaUmidade,
+        (SELECT MAX(h.data_hora) FROM HISTORICO_UMIDADE h WHERE h.id_dispositivo_fk = d.id_dispositivo) AS ultimaAtualizacao,
+        ${comChave ? "d.chave_hash IS NOT NULL" : "0"} AS chaveConfigurada
+        FROM DISPOSITIVOS d INNER JOIN FAZENDAS f ON f.id_fazenda = d.id_fazenda_fk
+        WHERE f.id_usuario_fk = ? AND f.deleted_at IS NULL AND d.deleted_at IS NULL
+      ) x ORDER BY x.nome`,
+      [req.usuarioAutenticado]
     );
-  }
 
   try {
-    const [rows] = await pool.execute(
-      `SELECT d.id_dispositivo AS id, d.nome_dispositivo AS nome, d.mac_address AS mac,
-      d.status_conexao AS status, d.id_fazenda_fk AS id_fazenda, d.id_campo, f.nome_fazenda AS fazenda
-      FROM DISPOSITIVOS d INNER JOIN FAZENDAS f ON f.id_fazenda = d.id_fazenda_fk
-      WHERE f.id_usuario_fk = ? AND f.deleted_at IS NULL AND d.deleted_at IS NULL ORDER BY d.nome_dispositivo`,
-      [id_usuario]
-    );
+    let rows;
+    try {
+      [rows] = await listarDispositivos(true);
+    } catch (error) {
+      // Antes da migração 006 a coluna chave_hash não existe: a lista continua funcionando.
+      if (error.code !== "ER_BAD_FIELD_ERROR") throw error;
+      [rows] = await listarDispositivos(false);
+    }
+    // Conectado = contato do aparelho dentro da janela; o campo gravado pode ficar desatualizado.
     return res.json(
-      rows.map((row) => ({
+      rows.map(({ conectado, chaveConfigurada, ...row }) => ({
         ...row,
-        online: row.status === "ON",
+        status: conectado ? "ON" : "OFF",
+        online: Boolean(conectado),
+        chaveConfigurada: Boolean(chaveConfigurada),
         talhaoVinculado: row.fazenda
       }))
     );
@@ -735,46 +648,35 @@ app.get("/api/dispositivos", async (req, res) => {
 });
 
 app.post("/api/dispositivos", async (req, res) => {
-  const { nome_dispositivo, mac_address, id_fazenda, id_campo } = req.body;
+  const { id_fazenda, id_campo } = req.body;
+  const nome = texto(req.body.nome_dispositivo);
+  const macInformado = texto(req.body.mac_address);
   if (
-    !nome_dispositivo ||
-    !mac_address ||
+    !nome ||
+    !macInformado ||
     !id_fazenda ||
     id_campo === undefined ||
+    id_campo === null ||
     id_campo === ""
   )
     return res
       .status(400)
       .json({ mensagem: "Nome, MAC, fazenda e campo são obrigatórios." });
-
-  if (!(await verificarBancoDisponivel())) {
-    const fazenda = FALLBACK_FAZENDAS.find(
-      (item) => String(item.id) === String(id_fazenda)
-    );
-    if (!fazenda)
-      return res
-        .status(404)
-        .json({ mensagem: "Fazenda informada não encontrada." });
-    res.setHeader("X-Data-Source", "demo");
-    const novoDispositivo = {
-      id:
-        FALLBACK_DISPOSITIVOS.reduce(
-          (maiorId, item) => Math.max(maiorId, Number(item.id) || 0),
-          0
-        ) + 1,
-      id_usuario: fazenda.id_usuario,
-      nome: nome_dispositivo.trim(),
-      mac: mac_address.trim().toUpperCase(),
-      online: false,
-      id_fazenda: Number(id_fazenda),
-      id_campo: Number(id_campo),
-      fazenda: "Fazenda de demonstração",
-      talhaoVinculado: "Fazenda de demonstração"
-    };
-    FALLBACK_DISPOSITIVOS.push(novoDispositivo);
-    const { id_usuario: _idUsuario, ...dispositivoPublico } = novoDispositivo;
-    return res.status(201).json(dispositivoPublico);
-  }
+  if (nome.length > LIMITES.nomeDispositivo)
+    return res
+      .status(400)
+      .json({ mensagem: `O nome do dispositivo deve ter no máximo ${LIMITES.nomeDispositivo} caracteres.` });
+  if (!MAC_PATTERN.test(macInformado))
+    return res
+      .status(400)
+      .json({ mensagem: "Informe o MAC no formato AA:BB:CC:DD:EE:FF." });
+  if (!idPositivo(id_fazenda))
+    return res.status(400).json({ mensagem: "Fazenda inválida." });
+  if (!/^\d+$/.test(String(id_campo)) || Number(id_campo) > 2147483647)
+    return res
+      .status(400)
+      .json({ mensagem: "O campo deve ser um número inteiro não negativo." });
+  const mac = normalizarMac(macInformado);
 
   try {
     const [owned] = await pool.execute(
@@ -785,44 +687,29 @@ app.post("/api/dispositivos", async (req, res) => {
       return res.status(403).json({ mensagem: "Fazenda não autorizada." });
     const [result] = await pool.execute(
       "INSERT INTO DISPOSITIVOS (nome_dispositivo, mac_address, status_conexao, id_fazenda_fk, id_campo) VALUES (?, ?, 'OFF', ?, ?)",
-      [
-        nome_dispositivo.trim(),
-        mac_address.trim().toUpperCase(),
-        id_fazenda,
-        id_campo
-      ]
+      [nome, mac, id_fazenda, Number(id_campo)]
     );
     const [rows] = await pool.execute(
-      "SELECT id_dispositivo AS id, nome_dispositivo AS nome, mac_address AS mac, status_conexao AS status, id_fazenda_fk AS id_fazenda, id_campo FROM DISPOSITIVOS WHERE id_dispositivo = ?",
+      `SELECT d.id_dispositivo AS id, d.nome_dispositivo AS nome, d.mac_address AS mac,
+      d.status_conexao AS status, d.id_fazenda_fk AS id_fazenda, d.id_campo, f.nome_fazenda AS fazenda
+      FROM DISPOSITIVOS d INNER JOIN FAZENDAS f ON f.id_fazenda = d.id_fazenda_fk
+      WHERE d.id_dispositivo = ?`,
       [result.insertId]
     );
-    return res.status(201).json({ ...rows[0], online: false });
+    return res
+      .status(201)
+      .json({ ...rows[0], online: false, talhaoVinculado: rows[0]?.fazenda });
   } catch (error) {
     return contaError(res, error);
   }
 });
 
-app.delete("/api/dispositivos/:id", verificarTokenSessao, async (req, res) => {
+app.delete("/api/dispositivos/:id", async (req, res) => {
   const idDispositivo = String(req.params.id);
-  if (!/^\d+$/.test(idDispositivo) || Number(idDispositivo) < 1) {
+  if (!idPositivo(idDispositivo)) {
     return res
       .status(400)
       .json({ mensagem: "Identificador de dispositivo inválido." });
-  }
-
-  if (!(await verificarBancoDisponivel())) {
-    const dispositivo = FALLBACK_DISPOSITIVOS.find(
-      (item) =>
-        String(item.id) === idDispositivo &&
-        item.id_usuario === req.usuarioAutenticado &&
-        !item.deleted_at
-    );
-    if (!dispositivo)
-      return res.status(404).json({ mensagem: "Dispositivo não encontrado." });
-    dispositivo.deleted_at = new Date().toISOString();
-    dispositivo.online = false;
-    res.setHeader("X-Data-Source", "demo");
-    return res.status(204).end();
   }
 
   try {
@@ -842,103 +729,173 @@ app.delete("/api/dispositivos/:id", verificarTokenSessao, async (req, res) => {
   }
 });
 
+const loginLimiter = createLoginLimiter();
+// Mesma mensagem para e-mail inexistente e senha incorreta: não revela contas cadastradas.
+const CREDENCIAIS_INVALIDAS = { sucesso: false, mensagem: "E-mail ou senha inválidos." };
+
 app.post("/api/login", async (req, res) => {
-  const { email, senha } = req.body;
-  const emailNormalizado = normalizarEmail(email);
-  const senhaNormalizada = String(senha || "").trim();
+  const emailNormalizado = normalizarEmail(req.body?.email);
+  const senhaNormalizada = String(req.body?.senha || "").trim();
 
   if (!emailNormalizado || !senhaNormalizada) {
     return res
       .status(400)
       .json({ sucesso: false, mensagem: "E-mail e senha são obrigatórios." });
   }
+  if (emailNormalizado.length > 254 || senhaNormalizada.length > 1024)
+    return res.status(401).json(CREDENCIAIS_INVALIDAS);
 
-  const bancoDisponivel = await verificarBancoDisponivel();
-  const usuarioFallback = localizarUsuarioFallback(
-    emailNormalizado,
-    senhaNormalizada
-  );
-  if (!bancoDisponivel) {
-    if (usuarioFallback) {
-      return res.json({
-        sucesso: true,
-        accessToken: criarTokenSessao(usuarioFallback.id_usuario),
-        usuario: {
-          id: usuarioFallback.id_usuario,
-          nome: usuarioFallback.nome,
-          email: usuarioFallback.email,
-          telefone: usuarioFallback.telefone,
-          tipo: usuarioFallback.tipo_usuario
-        }
-      });
-    }
-    return res
-      .status(401)
-      .json({ sucesso: false, mensagem: "E-mail ou senha inválidos." });
+  const limiteKey = { ip: req.ip, email: emailNormalizado };
+  const bloqueio = loginLimiter.check(limiteKey);
+  if (bloqueio) {
+    res.setHeader("Retry-After", String(bloqueio));
+    return res.status(429).json({
+      sucesso: false,
+      mensagem: "Muitas tentativas de login. Aguarde alguns minutos e tente novamente."
+    });
   }
 
   try {
-    const sql = "SELECT * FROM USUARIO WHERE LOWER(email) = ?";
-    const [results] = await pool.execute(sql, [emailNormalizado]);
-
-    if (results.length === 0) {
-      return res
-        .status(401)
-        .json({ sucesso: false, mensagem: "E-mail não cadastrado." });
-    }
-
+    // A collation utf8mb4_unicode_ci compara sem diferenciar maiúsculas e usa o índice único.
+    const [results] = await pool.execute(
+      "SELECT id_usuario, nome, email, telefone, tipo_usuario, senha FROM USUARIO WHERE email = ? LIMIT 1",
+      [emailNormalizado]
+    );
     const usuarioNoBanco = results[0];
-    const senhaBanco = usuarioNoBanco.senha
+    const senhaBanco = usuarioNoBanco?.senha
       ? usuarioNoBanco.senha.toString().trim()
       : "";
 
-    if (await verifyPassword(senhaNormalizada, senhaBanco, !production)) {
-      if (canHashWithBcrypt(senhaNormalizada) && needsPasswordRehash(senhaBanco)) {
-        const hash = await hashPassword(senhaNormalizada);
-        const [updated] = await pool.execute(
-          "UPDATE USUARIO SET senha = ? WHERE id_usuario = ? AND BINARY senha = ?",
-          [hash, usuarioNoBanco.id_usuario, usuarioNoBanco.senha]
-        );
-        if (!updated.affectedRows) {
-          return res.status(401).json({ sucesso: false, mensagem: "Senha alterada. Entre novamente." });
-        }
-      }
-      return res.json({
-        sucesso: true,
-        accessToken: criarTokenSessao(usuarioNoBanco.id_usuario),
-        usuario: {
-          id: usuarioNoBanco.id_usuario,
-          nome: usuarioNoBanco.nome,
-          email: usuarioNoBanco.email,
-          telefone: usuarioNoBanco.telefone,
-          tipo: usuarioNoBanco.tipo_usuario
-        }
-      });
+    if (!usuarioNoBanco || !(await verifyPassword(senhaNormalizada, senhaBanco, !production))) {
+      loginLimiter.fail(limiteKey);
+      return res.status(401).json(CREDENCIAIS_INVALIDAS);
     }
 
-    return res
-      .status(401)
-      .json({ sucesso: false, mensagem: "Senha inválida." });
+    if (canHashWithBcrypt(senhaNormalizada) && needsPasswordRehash(senhaBanco)) {
+      const hash = await hashPassword(senhaNormalizada);
+      const [updated] = await pool.execute(
+        "UPDATE USUARIO SET senha = ? WHERE id_usuario = ? AND BINARY senha = ?",
+        [hash, usuarioNoBanco.id_usuario, usuarioNoBanco.senha]
+      );
+      if (!updated.affectedRows) {
+        return res.status(401).json({ sucesso: false, mensagem: "Senha alterada. Entre novamente." });
+      }
+    }
+    loginLimiter.reset(limiteKey);
+    return res.json({
+      sucesso: true,
+      accessToken: criarTokenSessao(usuarioNoBanco.id_usuario),
+      usuario: {
+        id: usuarioNoBanco.id_usuario,
+        nome: usuarioNoBanco.nome,
+        email: usuarioNoBanco.email,
+        telefone: usuarioNoBanco.telefone,
+        tipo: usuarioNoBanco.tipo_usuario
+      }
+    });
   } catch (err) {
     console.error("[LOGIN]", err.code || "DB_ERROR");
+    if (bancoIndisponivel(err)) return respostaBancoIndisponivel(res);
     return res
       .status(500)
       .json({ sucesso: false, mensagem: "Erro interno no servidor." });
   }
 });
 
+// Cadastro público: cada tentativa conta no limite por IP para conter criação em massa.
+const cadastroLimiter = createLoginLimiter({ windowMs: 60 * 60 * 1000, maxPerIp: 10, maxPerAccount: 10 });
+app.post("/api/cadastro", async (req, res) => {
+  const nome = texto(req.body?.nome);
+  const email = normalizarEmail(req.body?.email);
+  const telefone = textoOpcional(req.body?.telefone);
+  const senha = String(req.body?.senha || "").trim();
+
+  const limiteKey = { ip: req.ip, email };
+  const bloqueio = cadastroLimiter.check(limiteKey);
+  if (bloqueio) {
+    res.setHeader("Retry-After", String(bloqueio));
+    return res.status(429).json({
+      sucesso: false,
+      mensagem: "Muitas tentativas de cadastro. Aguarde alguns minutos e tente novamente."
+    });
+  }
+  cadastroLimiter.fail(limiteKey);
+
+  const invalido = (mensagem) => res.status(400).json({ sucesso: false, mensagem });
+  if (!nome || !email || !senha)
+    return invalido("Nome, e-mail e senha são obrigatórios.");
+  if (nome.length > LIMITES.nomeUsuario)
+    return invalido(`O nome deve ter no máximo ${LIMITES.nomeUsuario} caracteres.`);
+  if (email.length > LIMITES.email || !EMAIL_PATTERN.test(email))
+    return invalido("Informe um e-mail válido.");
+  if (telefone && telefone.length > LIMITES.telefone)
+    return invalido(`O telefone deve ter no máximo ${LIMITES.telefone} caracteres.`);
+  const erroSenha = validarNovaSenha(senha);
+  if (erroSenha) return invalido(erroSenha);
+
+  try {
+    const hash = await hashPassword(senha);
+    // Novas contas são sempre AGRICULTOR; o perfil TECNICO continua administrativo.
+    const [result] = await pool.execute(
+      "INSERT INTO USUARIO (nome, email, telefone, tipo_usuario, senha) VALUES (?, ?, ?, 'AGRICULTOR', ?)",
+      [nome, email, telefone, hash]
+    );
+    return res.status(201).json({
+      sucesso: true,
+      accessToken: criarTokenSessao(result.insertId),
+      usuario: { id: result.insertId, nome, email, telefone, tipo: "AGRICULTOR" }
+    });
+  } catch (error) {
+    console.error("[CADASTRO]", error.code || "DB_ERROR");
+    if (error.code === "ER_DUP_ENTRY")
+      return res.status(409).json({
+        sucesso: false,
+        mensagem: "Este e-mail já está cadastrado. Entre com sua senha."
+      });
+    if (bancoIndisponivel(error)) return respostaBancoIndisponivel(res);
+    return res
+      .status(500)
+      .json({ sucesso: false, mensagem: "Não foi possível concluir o cadastro." });
+  }
+});
+
+createIotRoutes({ pool, bancoIndisponivel }).registrar(app);
+createPasswordResetRoutes({
+  pool,
+  secret: SESSION_SECRET,
+  hashPassword,
+  validarNovaSenha,
+  isMailConfigured,
+  createTransport,
+  bancoIndisponivel,
+  frontendOrigin,
+  // Caminho público do site (homepage do frontend), usado no link enviado por e-mail.
+  frontendBasePath: process.env.FRONTEND_BASE_PATH ?? "/tecti/2026/gpec05",
+  production
+}).registrar(app);
+
+app.use("/api", (_req, res) =>
+  res.status(404).json({ mensagem: "Recurso não encontrado." })
+);
+
 app.use((error, _req, res, _next) => {
   console.error("[API]", error.code || error.status || "INTERNAL_ERROR");
-  const status = error.status === 503 ? 503 : error.status === 400 ? 400 : 500;
+  const status = bancoIndisponivel(error)
+    ? 503
+    : error.status === 400 || error.status === 413
+      ? error.status
+      : 500;
   res
     .status(status)
     .json({
       mensagem:
         status === 503
           ? "Banco de dados indisponível."
-          : status === 400
-            ? "Requisição inválida."
-            : "Erro interno no servidor."
+          : status === 413
+            ? "Requisição muito grande."
+            : status === 400
+              ? "Requisição inválida."
+              : "Erro interno no servidor."
     });
 });
 

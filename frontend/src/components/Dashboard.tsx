@@ -1,4 +1,6 @@
 import { apiFetch } from "../services/http";
+import { clearSession } from "../services/session";
+import DashboardGreeting from "./DashboardGreeting";
 import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AlertCircle, BookOpen, LogOut, Printer, RefreshCw, Sprout, Wifi } from "lucide-react";
@@ -28,6 +30,7 @@ type DispositivoResumo = {
   fazenda?: string | null;
   status?: string;
   online?: boolean;
+  ultimaUmidade?: number | null;
 };
 
 type CollectionResult<T> = { records: T[]; demonstracao: boolean };
@@ -119,8 +122,6 @@ const Dashboard: React.FC = () => {
   const location = useLocation();
   const name = localStorage.getItem("usuarioNome") ?? "Usuário";
   const userId = localStorage.getItem("usuarioId");
-  const [dateTime, setDateTime] = useState("");
-  const [greeting, setGreeting] = useState("Bom dia");
   const [fazendas, setFazendas] = useState<FazendaResumo[]>([]);
   const [dispositivos, setDispositivos] = useState<DispositivoResumo[]>([]);
   const [carregandoResumo, setCarregandoResumo] = useState(true);
@@ -129,6 +130,10 @@ const Dashboard: React.FC = () => {
   const [atualizadoEm, setAtualizadoEm] = useState<Date | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const initials = name.slice(0, 2).toUpperCase();
+  const comLeitura = dispositivos.filter((d) => d.ultimaUmidade !== null && d.ultimaUmidade !== undefined);
+  const umidadeMedia = comLeitura.length
+    ? comLeitura.reduce((total, d) => total + Number(d.ultimaUmidade), 0) / comLeitura.length
+    : null;
   const activeNav = location.pathname.endsWith("/sensores")
     ? "Sensores"
     : location.pathname.endsWith("/campos")
@@ -165,25 +170,6 @@ const Dashboard: React.FC = () => {
     ? `M${firstSeriesPoints.map((point) => `${point.x},${point.y}`).join(" L")} L620,220 L30,220 Z`
     : "";
   useEffect(() => {
-    const updateClock = () => {
-      const now = new Date();
-      const hour = now.getHours();
-      setGreeting(hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite");
-      const date = now.toLocaleDateString("pt-BR", {
-        weekday: "long",
-        day: "numeric",
-        month: "long"
-      });
-      setDateTime(
-        `${date.charAt(0).toUpperCase()}${date.slice(1)} · ${now.toLocaleTimeString("pt-BR")}`
-      );
-    };
-    updateClock();
-    const timer = window.setInterval(updateClock, 1000);
-    return () => window.clearInterval(timer);
-  }, []);
-
-  useEffect(() => {
     let cancelado = false;
     setCarregandoResumo(true);
     setErroResumo("");
@@ -214,10 +200,7 @@ const Dashboard: React.FC = () => {
   }, [userId, refreshKey]);
 
   const logout = () => {
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("usuarioId");
-    localStorage.removeItem("usuarioNome");
-    localStorage.removeItem("usuarioLogado");
+    clearSession();
     navigate("/login");
   };
 
@@ -228,8 +211,7 @@ const Dashboard: React.FC = () => {
       <main className="dashboard-main">
         <header className="dashboard-topbar">
           <div>
-            <h1>{greeting}, {name}</h1>
-            <p>Visão geral da operação · {dateTime}</p>
+            <DashboardGreeting name={name} />
           </div>
           <div className="dashboard-account-actions">
             <button
@@ -324,8 +306,17 @@ const Dashboard: React.FC = () => {
               </div>
               <div className="dashboard-kpi">
                 <div className="dashboard-kpi-head">Leituras de umidade</div>
-                <div className="dashboard-kpi-value dashboard-kpi-text">Não integradas</div>
-                <div className="dashboard-kpi-sub">A API ainda não disponibiliza telemetria</div>
+                {umidadeMedia === null ? (
+                  <>
+                    <div className="dashboard-kpi-value dashboard-kpi-text">Aguardando sensores</div>
+                    <div className="dashboard-kpi-sub">Nenhum dispositivo enviou leituras ainda</div>
+                  </>
+                ) : (
+                  <>
+                    <div className="dashboard-kpi-value">{umidadeMedia.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}<small>%</small></div>
+                    <div className="dashboard-kpi-sub">Média da última leitura de {comLeitura.length} dispositivo(s)</div>
+                  </>
+                )}
               </div>
               <div className="dashboard-kpi">
                 <div className="dashboard-kpi-head">Alertas de manejo</div>

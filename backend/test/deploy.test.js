@@ -33,6 +33,9 @@ test('API: health, CORS, autenticação, isolamento e falha do banco', async (t)
   let response = await fetch(base + '/health', { headers: { Origin: 'https://frontend.example' } });
   assert.equal(response.status, 200);
   assert.equal(response.headers.get('access-control-allow-origin'), 'https://frontend.example');
+  assert.equal(response.headers.get('x-powered-by'), null);
+  assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
+  assert.equal(response.headers.get('x-frame-options'), 'DENY');
   response = await fetch(base + '/health', { headers: { Origin: 'https://untrusted.example' } });
   assert.equal(response.headers.get('access-control-allow-origin'), null);
   response = await fetch(base + '/api/culturas');
@@ -45,6 +48,8 @@ test('API: health, CORS, autenticação, isolamento e falha do banco', async (t)
     response = await fetch(base + path, { headers: { Authorization: `Bearer ${token}` } });
     assert.equal(response.status, 403, path);
   }
+  response = await fetch(base + '/api/rota-inexistente', { headers: { Authorization: `Bearer ${token}` } });
+  assert.equal(response.status, 404);
   response = await fetch(base + '/api/health');
   assert.equal(response.status, 503);
   response = await fetch(base + '/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'teste@example.com', senha: 'teste' }) });

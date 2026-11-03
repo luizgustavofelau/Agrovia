@@ -52,7 +52,7 @@ async function applyMigrations() {
   } catch (error) {
     console.error('[MIGRATION] Falha ao aplicar migrações:', error.code || 'DB_ERROR');
     if (activeFile) console.error(`[MIGRATION] Arquivo: ${activeFile}, instrução: ${activeStatement}. DDL anterior pode ter sido aplicado; revise antes de repetir.`);
-    else console.error('[MIGRATION] Confira DATABASE_URL e argumentos: --dry-run e/ou --from=NNN.');
+    else console.error('[MIGRATION] Confira DATABASE_URL (ou DB_HOST/DB_USER/DB_PASS/DB_NAME) e argumentos: --dry-run e/ou --from=NNN.');
     process.exitCode = 1;
   } finally {
     if (connection) connection.release();

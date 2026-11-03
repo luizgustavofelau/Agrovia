@@ -1,6 +1,8 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Activity, BookOpen, CloudSun, Droplets, FileText, Map, Radio, Sprout, Waves } from "lucide-react";
+import { useLandingMotion } from "../hooks/useLandingMotion";
+import { ChuvaDistante, ChuvaProxima, IrrigadorAnimado } from "./HeroIrrigacao";
 import "../styles/landing.css";
 
 const processSteps = [
@@ -37,144 +39,116 @@ const cropPreviews = [
   { name: "Feijão", category: "Leguminosa", image: `${process.env.PUBLIC_URL}/img/feijao.jpg`, imageAlt: "Cultivo de feijão", description: "Revise estabelecimento, florescimento, formação de vagens e enchimento de grãos. O conteúdo relaciona estresse hídrico, drenagem e escolha de época às condições locais." },
 ];
 
+const LOGO_SRC = `${process.env.PUBLIC_URL}/img/logo-agrovia.png`;
+
+const navLinks = [
+  { href: "#about", label: "Sobre" },
+  { href: "#how", label: "Como Funciona" },
+  { href: "#benefits", label: "Benefícios" },
+  { href: "#features", label: "Recursos" },
+  { href: "#library", label: "Estudos" },
+];
+
+const revealDelay = (index: number) => ({ "--reveal-delay": `${Math.min(index, 5) * 70}ms` } as React.CSSProperties);
+
+const BrandWord: React.FC = () => (
+  <span className="brand-word">AGRO<span className="brand-word-accent">VIA</span></span>
+);
+
 const ParallaxDrops: React.FC = () => {
   const navigate = useNavigate();
-  const [scrollY, setScrollY] = useState(0);
-  const midSectionRef = useRef<HTMLDivElement | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const navRef = useRef<HTMLElement>(null);
+  const heroRef = useRef<HTMLElement>(null);
+  const heroBgRef = useRef<HTMLDivElement>(null);
+  const heroGlowRef = useRef<HTMLDivElement>(null);
+  const heroDropsRef = useRef<SVGSVGElement>(null);
+  const sprinklerRef = useRef<SVGSVGElement>(null);
+  const rainNearRef = useRef<SVGSVGElement>(null);
+  const heroContentRef = useRef<HTMLDivElement>(null);
+  const midSectionRef = useRef<HTMLDivElement>(null);
+  const midBgRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  useLandingMotion({
+    root: rootRef,
+    nav: navRef,
+    hero: heroRef,
+    heroBg: heroBgRef,
+    heroGlow: heroGlowRef,
+    heroDrops: heroDropsRef,
+    sprinkler: sprinklerRef,
+    rainNear: rainNearRef,
+    heroContent: heroContentRef,
+    mid: midSectionRef,
+    midBg: midBgRef,
+  });
 
-    if (prefersReducedMotion) {
-      setScrollY(0);
-      return undefined;
-    }
-
-    let ticking = false;
-
-    const handleScroll = () => {
-      if (!ticking) {
-        window.requestAnimationFrame(() => {
-          setScrollY(window.scrollY);
-          ticking = false;
-        });
-        ticking = true;
-      }
-    };
-
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    window.addEventListener("resize", handleScroll, { passive: true });
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-      window.removeEventListener("resize", handleScroll);
-    };
-  }, []);
-
-  const limitar = (valor: number, minimo: number, maximo: number) => Math.min(maximo, Math.max(minimo, valor));
-  const heroParallax = limitar(scrollY * 0.14, 0, 110);
-  const heroContentParallax = limitar(scrollY * 0.04, 0, 32);
-  const midSectionTop = midSectionRef.current?.getBoundingClientRect().top ?? window.innerHeight;
-  const midParallax = limitar((window.innerHeight / 2 - midSectionTop) * 0.07, -50, 50);
-  const overlayParallax = limitar(scrollY * 0.18, 0, 130);
+  const irParaLogin = () => navigate("/login");
+  const irParaCadastro = () => navigate("/cadastro");
+  const rolarAte = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   return (
-    <div className="landing-container">
+    <div className="landing-container" ref={rootRef}>
       {/* ──── NAV ──── */}
-      <nav className="nav">
-        <div className="nav-logo">
-          <img src={`${process.env.PUBLIC_URL}/img/logo-agrovia.png`} alt="Agrovia Logo" className="nav-logo-img" style={{ height: '42px' }} />
-          AGRO<span>VIA</span>
-        </div>
+      <nav className="nav" ref={navRef} aria-label="Navegação da página inicial">
+        <a className="nav-logo" href="#top" onClick={(event) => { event.preventDefault(); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
+          <img src={LOGO_SRC} alt="" className="nav-logo-img" width="42" height="42" />
+          <BrandWord />
+        </a>
         <ul className="nav-links">
-          <li>
-            <a href="#about">Sobre</a>
-          </li>
-          <li>
-            <a href="#how">Como Funciona</a>
-          </li>
-          <li>
-            <a href="#benefits">Benefícios</a>
-          </li>
-          <li>
-            <a href="#features">Recursos</a>
-          </li>
-          <li>
-            <a href="#library">Estudos</a>
-          </li>
+          {navLinks.map((link) => (
+            <li key={link.href}>
+              <a href={link.href}>{link.label}</a>
+            </li>
+          ))}
         </ul>
-        <button className="nav-cta" onClick={() => navigate("/login")}>
-          Fazer Login
-
-        </button>
+        <div className="nav-actions">
+          <button type="button" className="nav-signup" onClick={irParaCadastro}>
+            Criar conta
+          </button>
+          <button type="button" className="nav-cta" onClick={irParaLogin}>
+            Fazer Login
+          </button>
+        </div>
       </nav>
 
       {/* ──── HERO ──── */}
-      <section className="hero">
-        <div
-          className="hero-bg"
-          id="heroBg"
-          style={{ transform: `translate3d(0, ${heroParallax}px, 0) scale(1.12)` }}
-        ></div>
-        <div
-          className="hero-glow"
-          style={{ transform: `translate3d(0, ${overlayParallax}px, 0)` }}
-        ></div>
-        <svg
-          className="hero-drops"
-          viewBox="0 0 1440 800"
-          preserveAspectRatio="xMidYMid slice"
-          style={{ transform: `translate3d(0, ${heroParallax * 1.6}px, 0)` }}
-        >
-          <defs>
-            <linearGradient id="dropGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor="rgba(167,243,208,0)" />
-              <stop offset="50%" stopColor="rgba(52,211,153,0.95)" />
-              <stop offset="100%" stopColor="rgba(16,185,129,0.4)" />
-            </linearGradient>
-          </defs>
-          <ellipse className="drop" cx="120" cy="50" rx="3" ry="7" style={{ animationDuration: "4s", animationDelay: "0s" }} />
-          <ellipse className="drop" cx="300" cy="80" rx="2" ry="5" style={{ animationDuration: "5s", animationDelay: "1.2s" }} />
-          <ellipse className="drop" cx="520" cy="30" rx="3" ry="8" style={{ animationDuration: "3.8s", animationDelay: "0.5s" }} />
-          <ellipse className="drop" cx="750" cy="60" rx="2" ry="6" style={{ animationDuration: "4.5s", animationDelay: "2s" }} />
-          <ellipse className="drop" cx="970" cy="40" rx="3" ry="7" style={{ animationDuration: "3.5s", animationDelay: "0.8s" }} />
-          <ellipse className="drop" cx="1180" cy="70" rx="2" ry="5" style={{ animationDuration: "5.2s", animationDelay: "1.7s" }} />
-          <ellipse className="drop" cx="1380" cy="25" rx="3" ry="6" style={{ animationDuration: "4.2s", animationDelay: "0.3s" }} />
-          <ellipse className="drop" cx="220" cy="20" rx="2" ry="4" style={{ animationDuration: "6s", animationDelay: "2.5s" }} />
-          <ellipse className="drop" cx="650" cy="10" rx="3" ry="7" style={{ animationDuration: "4.8s", animationDelay: "1s" }} />
-          <ellipse className="drop" cx="1050" cy="55" rx="2" ry="5" style={{ animationDuration: "3.2s", animationDelay: "3s" }} />
-        </svg>
-        <div
-          className="hero-content"
-          style={{ transform: `translate3d(0, ${heroContentParallax}px, 0)` }}
-        >
-          <div className="hero-brand">
-          </div>
+      <section className="hero" id="top" ref={heroRef}>
+        <div className="hero-bg" ref={heroBgRef} aria-hidden="true"></div>
+        <div className="hero-glow" ref={heroGlowRef} aria-hidden="true"></div>
+        <ChuvaDistante ref={heroDropsRef} />
+        <IrrigadorAnimado ref={sprinklerRef} />
+        <ChuvaProxima ref={rainNearRef} />
+        <div className="hero-content" ref={heroContentRef}>
           <p className="hero-eyebrow">Irrigação Inteligente · ESP32 · IoT · Agronegócio</p>
           <h1 className="hero-title">
-            Decisões melhores <span style={{ color: "#7fff6a" }}>começam no solo</span>
+            Decisões melhores <span className="text-neon">começam no solo</span>
           </h1>
           <p className="hero-sub">
             A Agrovia organiza informações da propriedade e dos dispositivos para apoiar o acompanhamento da umidade do solo. Ao relacionar essas observações com clima, cultura e fase de desenvolvimento, o produtor ganha contexto para planejar a irrigação. A decisão continua dependente das condições e da avaliação de cada área.
           </p>
           <div className="hero-btns">
-            <button className="btn-primary" onClick={() => navigate("/login")}>
-              Acessar plataforma
+            <button type="button" className="btn-primary" onClick={irParaLogin}>
+              Acessar plataforma <span aria-hidden="true">→</span>
             </button>
-            <button className="btn-outline" onClick={() => document.getElementById("features")?.scrollIntoView()}>
+            <button type="button" className="btn-ghost" onClick={() => rolarAte("features")}>
               Conhecer recursos
             </button>
           </div>
         </div>
+        <a className="hero-scroll" href="#about" aria-label="Rolar para a seção Sobre">
+          <span aria-hidden="true"></span>
+        </a>
       </section>
 
       {/* ──── ABOUT ──── */}
       <section className="about" id="about">
-        <div className="about-visual" aria-label="Solo, sensores e análise">
-          <div className="about-visual-line"><span><Waves size={22} /></span><div><strong>Solo</strong><small>Condições variáveis</small></div></div>
-          <div className="about-visual-line"><span><Radio size={22} /></span><div><strong>Informações</strong><small>Leituras e registros</small></div></div>
-          <div className="about-visual-line"><span><Sprout size={22} /></span><div><strong>Manejo</strong><small>Decisão contextualizada</small></div></div>
+        <div className="about-visual reveal" aria-label="Solo, sensores e análise">
+          <div className="about-visual-line"><span><Waves size={22} aria-hidden="true" /></span><div><strong>Solo</strong><small>Condições variáveis</small></div></div>
+          <div className="about-visual-line"><span><Radio size={22} aria-hidden="true" /></span><div><strong>Informações</strong><small>Leituras e registros</small></div></div>
+          <div className="about-visual-line"><span><Sprout size={22} aria-hidden="true" /></span><div><strong>Manejo</strong><small>Decisão contextualizada</small></div></div>
         </div>
-        <div className="about-copy">
+        <div className="about-copy reveal" style={revealDelay(1)}>
           <p className="section-tag">Monitoramento</p>
           <h2 className="section-title">Entenda o que acontece antes de irrigar</h2>
           <p className="section-body">A água no solo não é uniforme: textura, estrutura, relevo, cobertura e profundidade das raízes influenciam infiltração e armazenamento. Por isso, uma medição representa apenas o local e a camada em que foi feita. Interpretada junto da chuva, do clima, da cultura e de sua fase, ela pode compor uma análise mais completa da área.</p>
@@ -185,52 +159,50 @@ const ParallaxDrops: React.FC = () => {
 
       {/* ──── HOW IT WORKS ──── */}
       <section className="how" id="how">
-        <div className="section-heading">
+        <div className="section-heading reveal">
           <p className="section-tag">Processo</p>
           <h2 className="section-title">Da leitura à decisão</h2>
           <p className="section-body">Um percurso para transformar observações em informação organizada e apoiar uma decisão revisável, com a realidade do talhão sempre em primeiro plano.</p>
         </div>
-        <div className="how-grid">
+        <ol className="how-grid">
           {processSteps.map(({ title, description, icon: Icon }, index) => (
-            <article className="how-step" key={title}>
-              <div className="step-number">0{index + 1}</div>
-              <div className="step-icon"><Icon size={22} aria-hidden="true" /></div>
+            <li className="how-step reveal" key={title} style={revealDelay(index)}>
+              <div className="step-head">
+                <span className="step-number">0{index + 1}</span>
+                <span className="step-icon"><Icon size={22} aria-hidden="true" /></span>
+              </div>
               <h3 className="step-title">{title}</h3>
               <p className="step-desc">{description}</p>
-            </article>
+            </li>
           ))}
-        </div>
+        </ol>
         <p className="process-note">O fluxo é educativo. A coleta, o histórico e qualquer automação dependem dos sensores e das integrações efetivamente instalados e configurados.</p>
       </section>
 
       {/* ──── PARALLAX MID ──── */}
       <div className="parallax-mid" ref={midSectionRef}>
-        <div
-          className="parallax-mid-bg"
-          id="midBg"
-          style={{ transform: `translate3d(0, ${midParallax}px, 0) scale(1.12)` }}
-        ></div>
-        <div className="parallax-mid-content">
+        <div className="parallax-mid-bg" ref={midBgRef} aria-hidden="true"></div>
+        <div className="parallax-mid-content reveal">
           <div className="mid-brand">
-            <img src={`${process.env.PUBLIC_URL}/img/logo-agrovia.png`} alt="Agrovia Logo" className="mid-logo-img" />
+            <img src={LOGO_SRC} alt="" className="mid-logo-img" width="56" height="56" loading="lazy" />
           </div>
           <p className="pull-quote">
             Conhecimento e contexto,{" "}
-            <span style={{ color: "#7fff6a" }}>a serviço do campo.</span>
+            <span className="text-neon">a serviço do campo.</span>
           </p>
         </div>
       </div>
 
       {/* ──── BENEFITS ──── */}
       <section className="benefits" id="benefits">
-        <div className="section-heading">
+        <div className="section-heading reveal">
           <p className="section-tag">Uso consciente</p>
           <h2 className="section-title">Mais contexto para o manejo</h2>
           <p className="section-body">A tecnologia pode ajudar a organizar o trabalho e a observar mudanças; os resultados dependem do uso e das condições locais.</p>
         </div>
         <ul className="benefit-list">
-          {benefits.map((benefit) => (
-            <li key={benefit.title}>
+          {benefits.map((benefit, index) => (
+            <li key={benefit.title} className="reveal" style={revealDelay(index % 3)}>
               <span aria-hidden="true">+</span>
               <div><strong>{benefit.title}</strong><small>{benefit.description}</small></div>
             </li>
@@ -240,18 +212,18 @@ const ParallaxDrops: React.FC = () => {
 
       {/* ──── FEATURES ──── */}
       <section className="features" id="features">
-        <div className="section-heading">
+        <div className="section-heading reveal">
           <p className="section-tag">Plataforma</p>
           <h2 className="section-title">Informação agrícola em um só lugar</h2>
           <p className="section-body">Acesse as áreas disponíveis após entrar. Recursos que ainda dependem de integração são identificados dentro do painel.</p>
         </div>
         <div className="feature-grid">
-          {features.map(({ title, description, icon: Icon }) => (
-            <article className="feature-card" key={title}>
+          {features.map(({ title, description, icon: Icon }, index) => (
+            <article className="feature-card reveal" key={title} style={revealDelay(index % 3)}>
               <span className="feature-icon"><Icon size={21} aria-hidden="true" /></span>
               <h3>{title}</h3>
               <p>{description}</p>
-              <button type="button" onClick={() => navigate("/login")}>Acessar após login <span aria-hidden="true">→</span></button>
+              <button type="button" onClick={irParaLogin}>Acessar após login <span aria-hidden="true">→</span></button>
             </article>
           ))}
         </div>
@@ -259,23 +231,23 @@ const ParallaxDrops: React.FC = () => {
 
       {/* ──── LIBRARY PREVIEW ──── */}
       <section className="crops" id="library">
-        <div className="section-heading">
+        <div className="section-heading reveal">
           <p className="section-tag">Conhecimento aplicado</p>
           <h2 className="section-title">Estudos Agrícolas</h2>
           <p className="section-body">Materiais de consulta sobre cinco culturas, com conteúdo educativo e referências técnicas para aprofundar cada tema.</p>
         </div>
         <div className="crops-grid">
-          {cropPreviews.map((crop) => (
-            <article className="crop-card" key={crop.name}>
+          {cropPreviews.map((crop, index) => (
+            <article className="crop-card reveal" key={crop.name} style={revealDelay(index)}>
               <div className="crop-img">
-                <img src={crop.image} alt={crop.imageAlt} loading="lazy" />
+                <img src={crop.image} alt={crop.imageAlt} loading="lazy" decoding="async" width="400" height="300" />
                 <span className="crop-badge">{crop.category}</span>
                 {crop.imageCredit && <small className="crop-photo-credit">{crop.imageCredit}</small>}
               </div>
               <div className="crop-body">
                 <h3 className="crop-name">{crop.name}</h3>
                 <p className="crop-desc">{crop.description}</p>
-                <button type="button" className="crop-study-link" onClick={() => navigate("/login")}>Acessar estudos <span aria-hidden="true">→</span></button>
+                <button type="button" className="crop-study-link" onClick={irParaLogin}>Acessar estudos <span aria-hidden="true">→</span></button>
               </div>
             </article>
           ))}
@@ -284,38 +256,43 @@ const ParallaxDrops: React.FC = () => {
 
       {/* ──── CTA ──── */}
       <section className="cta-section">
-        <div className="cta-brand">
-          <img src={`${process.env.PUBLIC_URL}/img/logo-agrovia.png`} alt="Agrovia Logo" className="cta-logo-img" />
-          <span className="cta-brand-name">AGRO<span>VIA</span></span>
-        </div>
-        <p className="section-tag">Agrovia</p>
-        <h2 className="section-title">Acompanhe sua operação com mais contexto</h2>
-        <p className="section-body">
-          Entre na plataforma para organizar campos, consultar sensores e acessar os estudos agrícolas disponíveis.
-        </p>
-        <div className="cta-btns">
-          <button className="btn-primary" onClick={() => navigate("/login")}>
-            Acessar plataforma
-          </button>
-          <button className="btn-outline" onClick={() => window.scrollTo(0, 0)}>
-            Voltar ao Topo
-          </button>
+        <div className="cta-panel reveal">
+          <div className="cta-brand">
+            <img src={LOGO_SRC} alt="" className="cta-logo-img" width="52" height="52" loading="lazy" />
+            <span className="cta-brand-name"><BrandWord /></span>
+          </div>
+          <p className="section-tag">Agrovia</p>
+          <h2 className="section-title">Acompanhe sua operação com mais contexto</h2>
+          <p className="section-body">
+            Entre na plataforma para organizar campos, consultar sensores e acessar os estudos agrícolas disponíveis.
+          </p>
+          <div className="cta-btns">
+            <button type="button" className="btn-primary" onClick={irParaCadastro}>
+              Criar conta grátis <span aria-hidden="true">→</span>
+            </button>
+            <button type="button" className="btn-ghost" onClick={irParaLogin}>
+              Já tenho conta
+            </button>
+            <button type="button" className="btn-ghost" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
+              Voltar ao Topo
+            </button>
+          </div>
         </div>
       </section>
 
       {/* ──── FOOTER ──── */}
       <footer className="footer">
         <div className="footer-logo">
-          <img src={`${process.env.PUBLIC_URL}/img/logo-agrovia.png`} alt="Agrovia Logo" className="footer-logo-img" style={{ height: '36px' }} />
-          AGRO<span>VIA</span>
+          <img src={LOGO_SRC} alt="" className="footer-logo-img" width="36" height="36" loading="lazy" />
+          <BrandWord />
         </div>
         <div className="footer-copy">© 2026 AGROVIA · TCC UNASP Engenheiro Coelho</div>
-        <div className="footer-links">
+        <nav className="footer-links" aria-label="Links do rodapé">
           <a href="#about">Sobre</a>
           <a href="#how">Como Funciona</a>
           <a href="#features">Recursos</a>
           <a href="#library">Estudos Agrícolas</a>
-        </div>
+        </nav>
       </footer>
     </div>
   );

@@ -161,7 +161,26 @@
   letter-spacing: -0.04em;
 }
 
-.login-logo span {
+.login-logo {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  border-radius: 12px;
+  transition: opacity 0.2s ease;
+}
+
+.login-logo:hover {
+  opacity: 0.9;
+}
+
+.login-logo:focus-visible {
+  outline: 2px solid var(--green-neon);
+  outline-offset: 4px;
+}
+
+.login-logo-word span {
   color: var(--text);
 }
 
@@ -319,6 +338,167 @@
   font-size: 0.75rem;
   color: rgba(138, 171, 140, 0.5);
   letter-spacing: 0.05em;
+}
+
+/* Esqueci a senha (painel dentro do login) */
+.forgot-panel {
+  margin-top: -0.6rem;
+  padding: 1rem;
+  border: 1px solid rgba(127, 255, 106, 0.18);
+  border-radius: 16px;
+  background: rgba(14, 26, 15, 0.45);
+  animation: fadeIn 0.35s ease;
+}
+
+.forgot-panel-title {
+  color: var(--text);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.forgot-panel-text {
+  margin-top: 0.25rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.forgot-panel-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.forgot-panel-row input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid rgba(90, 160, 90, 0.25);
+  border-radius: 12px;
+  background: rgba(14, 26, 15, 0.6);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.9rem;
+}
+
+.forgot-panel-row input:focus {
+  outline: none;
+  border-color: var(--green-neon);
+  box-shadow: 0 0 0 3px rgba(127, 255, 106, 0.12);
+}
+
+.forgot-panel-btn {
+  flex-shrink: 0;
+  padding: 0.7rem 1rem;
+  border: 0;
+  border-radius: 12px;
+  background: var(--green-neon);
+  color: var(--dark);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 0.2s ease, transform 0.2s ease;
+}
+
+.forgot-panel-btn:hover:not(:disabled) {
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+}
+
+.forgot-panel-btn:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.forgot-panel-ok,
+.forgot-panel-error {
+  margin-top: 0.7rem;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.forgot-panel-ok {
+  color: #bfe9b8;
+}
+
+.forgot-panel-error {
+  color: #ff9d94;
+}
+
+/* Redefinir senha (página do link) */
+.login-shell--single {
+  grid-template-columns: minmax(0, 440px);
+  justify-content: center;
+}
+
+.login-btn--link {
+  text-decoration: none;
+  text-align: center;
+}
+
+.field-hint {
+  margin-top: -0.6rem;
+  padding-left: 0.5rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+@media (max-width: 420px) {
+  .forgot-panel-row {
+    flex-direction: column;
+  }
+}
+
+/* Cadastro */
+.signup-form {
+  gap: 1.1rem;
+}
+
+.signup-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.form-group input.input-invalid {
+  border-color: rgba(255, 120, 110, 0.7);
+}
+
+.field-error {
+  padding-left: 0.5rem;
+  color: #ff9d94;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.login-switch {
+  margin-top: 1.4rem;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.login-switch a {
+  color: var(--green-neon);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.login-switch a:hover {
+  text-decoration: underline;
+}
+
+.login-switch a:focus-visible {
+  outline: 2px solid var(--green-neon);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+@media (max-width: 520px) {
+  .signup-row {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Animations */

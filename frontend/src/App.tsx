@@ -2,6 +2,8 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import ParallaxDrops from './components/ParallaxDrops';
 import Login from './components/Login';
+import Cadastro from './components/Cadastro';
+import RedefinirSenha from './components/RedefinirSenha';
 import Dashboard from './components/Dashboard';
 import PrivateRoute from './components/PrivateRoute';
 import Conta from './pages/Conta';
@@ -15,6 +17,12 @@ function App() {
 
         {/* Página de Login */}
         <Route path="/login" element={<Login />} />
+
+        {/* Cadastro público de produtores (perfil AGRICULTOR) */}
+        <Route path="/cadastro" element={<Cadastro />} />
+
+        {/* Link de redefinição enviado por e-mail */}
+        <Route path="/redefinir-senha" element={<RedefinirSenha />} />
 
         {/* Painel — acessível apenas após login */}
         <Route
