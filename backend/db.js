@@ -11,6 +11,11 @@ const dbConfig = {
   queueLimit: 50,
   connectTimeout: 10000,
   enableKeepAlive: true,
+  // O MySQL da hospedagem encerra conexões paradas após 300 s (wait_timeout). Por padrão o pool
+  // guarda as ociosas para sempre e depois entrega uma conexão morta (ECONNRESET): a primeira
+  // requisição após um período parado falhava. Fechamos as ociosas antes do servidor, em 60 s.
+  maxIdle: 0,
+  idleTimeout: 60000,
   // DECIMAL (área, umidade) chega como número; sem isso o mysql2 devolve texto e
   // somas no frontend viram concatenação ("12.50" + "3.00").
   decimalNumbers: true,
@@ -28,6 +33,22 @@ pool.pool.on('connection', (connection) => {
     if (error) console.warn('[DB] Não foi possível ativar o modo estrito da sessão:', error.code || 'DB_ERROR');
   });
 });
+
+// Se mesmo assim uma conexão chegar morta (queda de rede, reinício do servidor), repete a
+// consulta uma única vez: o pool descarta a conexão quebrada e abre outra.
+const CONEXAO_PERDIDA = new Set(['ECONNRESET', 'EPIPE', 'PROTOCOL_CONNECTION_LOST']);
+for (const metodo of ['execute', 'query']) {
+  const original = pool[metodo].bind(pool);
+  pool[metodo] = async (...args) => {
+    try {
+      return await original(...args);
+    } catch (error) {
+      if (!CONEXAO_PERDIDA.has(error?.code)) throw error;
+      console.warn(`[DB] Conexão perdida (${error.code}); repetindo a consulta em uma conexão nova.`);
+      return original(...args);
+    }
+  };
+}
 
 async function query(sql, params) {
   const [rows] = await pool.execute(sql, params);
