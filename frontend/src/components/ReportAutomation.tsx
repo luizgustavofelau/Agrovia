@@ -92,7 +92,7 @@ export default function ReportAutomation() {
         </div>
       </div>
       <p className="report-automation-copy">
-        Receba um resumo das propriedades e da conexão dos dispositivos cadastrados. Leituras e condições atuais da plantação só serão incluídas quando a telemetria estiver integrada; o relatório não inventa diagnósticos.
+        Receba um resumo das propriedades e da conexão dos dispositivos cadastrados. As leituras de umidade podem ser acompanhadas no painel; o relatório não inventa diagnósticos.
       </p>
 
       {carregando ? (

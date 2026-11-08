@@ -1,0 +1,1311 @@
+/* ─── Tema neon do painel ───────────────────────────────────────────────────────────────
+   Leva para o painel (após o login) a identidade da página inicial e das telas de entrada:
+   fundo escuro com malha, verde neon, azul elétrico e cartões de vidro. Tudo é escopado em
+   .painel-neon (raiz do Dashboard e da Conta), sobrepondo as cores claras dos estilos antigos
+   e das classes utilitárias do Tailwind sem alterar o layout. */
+
+.painel-neon {
+  --pn-neon: #7fff6a;
+  --pn-azul: #38d6ff;
+  --pn-ambar: #ffc163;
+  --pn-vermelho: #ff8a7a;
+  --pn-violeta: #c9a2ff;
+  --pn-texto: #e8f0e9;
+  --pn-suave: #9fb8a2;
+  --pn-apagado: #6f8c73;
+  --pn-borda: rgba(127, 255, 106, 0.14);
+  --pn-borda-forte: rgba(127, 255, 106, 0.38);
+  --pn-vidro: rgba(12, 30, 18, 0.72);
+  --pn-vidro-claro: rgba(255, 255, 255, 0.04);
+  --pn-campo: rgba(4, 14, 8, 0.6);
+  --pn-sombra: 0 24px 48px -28px rgba(0, 0, 0, 0.8);
+  --pn-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Variáveis usadas pelos estilos antigos do painel. */
+  --bg: transparent;
+  --bg-soft: rgba(127, 255, 106, 0.1);
+  --sidebar: rgba(4, 12, 7, 0.82);
+  --sidebar-hover: rgba(127, 255, 106, 0.08);
+  --sidebar-active: rgba(127, 255, 106, 0.14);
+  --card: #0b1d12;
+  --border: var(--pn-borda);
+  --ink: var(--pn-texto);
+  --ink-soft: var(--pn-suave);
+  --leaf: var(--pn-neon);
+  --leaf-deep: var(--pn-neon);
+  --water: var(--pn-azul);
+
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  color: var(--pn-texto);
+  font-family: 'DM Sans', sans-serif;
+  /* Malha do talhão com brilhos verde e azul, fixa enquanto o conteúdo rola. */
+  background:
+    radial-gradient(ellipse at 85% 0%, rgba(0, 180, 255, 0.12), transparent 45%),
+    radial-gradient(ellipse at 15% 100%, rgba(127, 255, 106, 0.1), transparent 50%),
+    linear-gradient(rgba(127, 255, 106, 0.045) 1px, transparent 1px) 0 0 / 44px 44px,
+    linear-gradient(90deg, rgba(127, 255, 106, 0.045) 1px, transparent 1px) 0 0 / 44px 44px,
+    linear-gradient(160deg, #0a2311 0%, #06140b 50%, #04121a 100%) !important;
+  background-attachment: fixed !important;
+}
+
+/* Títulos com a fonte da página inicial. */
+.painel-neon h1,
+.painel-neon h2,
+.painel-neon h3,
+.painel-neon .dashboard-main h1,
+.painel-neon .dashboard-main h2,
+.painel-neon .dashboard-main h3,
+.painel-neon .dashboard-main .dashboard-kpi-value,
+.painel-neon .metric-value,
+.painel-neon .dashboard-brand-name {
+  font-family: 'Syne', sans-serif !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.03em !important;
+  color: #ffffff;
+}
+
+/* ── Menu lateral ── */
+.painel-neon .dashboard-sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  background: linear-gradient(180deg, rgba(6, 18, 11, 0.92), rgba(4, 12, 9, 0.92));
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  border-right: 1px solid var(--pn-borda);
+  box-shadow: 18px 0 40px -30px rgba(127, 255, 106, 0.35);
+}
+
+.painel-neon .brand-mark {
+  color: var(--pn-neon);
+  border-color: rgba(127, 255, 106, 0.45);
+  box-shadow: 0 0 16px -4px rgba(127, 255, 106, 0.7);
+}
+
+.painel-neon .dashboard-brand-name {
+  color: var(--pn-neon) !important;
+  text-shadow: 0 0 18px rgba(127, 255, 106, 0.4);
+}
+
+.painel-neon .dashboard-brand-sub {
+  color: var(--pn-apagado);
+}
+
+.painel-neon .dashboard-nav-item {
+  position: relative;
+  color: var(--pn-suave);
+  font-family: 'DM Sans', sans-serif;
+  transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.painel-neon .dashboard-nav-item:hover {
+  color: #ffffff;
+  background: rgba(127, 255, 106, 0.07);
+}
+
+.painel-neon .dashboard-nav-item.active,
+.painel-neon .dashboard-nav-item.account-active {
+  color: var(--pn-neon);
+  background: linear-gradient(90deg, rgba(127, 255, 106, 0.16), rgba(56, 214, 255, 0.06));
+  box-shadow: inset 3px 0 var(--pn-neon), 0 0 22px -10px rgba(127, 255, 106, 0.8);
+}
+
+.painel-neon .dashboard-nav-item.active svg {
+  filter: drop-shadow(0 0 6px rgba(127, 255, 106, 0.7));
+}
+
+.painel-neon .dashboard-sidebar-footer {
+  border: 1px solid var(--pn-borda);
+  background: linear-gradient(135deg, rgba(127, 255, 106, 0.08), rgba(56, 214, 255, 0.05));
+  color: var(--pn-suave);
+}
+
+.painel-neon .dashboard-sidebar-footer strong {
+  color: var(--pn-neon);
+}
+
+/* ── Topo ── */
+.painel-neon .dashboard-topbar h1 {
+  color: #ffffff;
+}
+
+.painel-neon .dashboard-topbar p,
+.painel-neon .eyebrow {
+  color: var(--pn-suave);
+}
+
+.painel-neon .dashboard-refresh-btn,
+.painel-neon .dashboard-logout-btn,
+.painel-neon .dashboard-user-chip {
+  border: 1px solid var(--pn-borda);
+  background: var(--pn-vidro);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  color: var(--pn-texto);
+  transition: border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.painel-neon .dashboard-refresh-btn:hover:not(:disabled) {
+  border-color: var(--pn-azul);
+  color: var(--pn-azul);
+  box-shadow: 0 0 18px -6px rgba(56, 214, 255, 0.8);
+}
+
+.painel-neon .dashboard-logout-btn:hover {
+  border-color: var(--pn-vermelho);
+  color: var(--pn-vermelho);
+  background: rgba(255, 110, 100, 0.08);
+}
+
+.painel-neon .dashboard-avatar {
+  background: linear-gradient(135deg, var(--pn-neon), var(--pn-azul));
+  color: #06120a;
+  font-weight: 800;
+  box-shadow: 0 0 14px -2px rgba(127, 255, 106, 0.7);
+}
+
+/* ── Faixa de status da telemetria ── */
+.painel-neon .dashboard-demo-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.8rem;
+  border: 1px solid var(--pn-borda);
+  border-radius: 14px;
+  background: var(--pn-vidro);
+  color: var(--pn-suave);
+}
+
+.painel-neon .dashboard-demo-banner strong {
+  color: #ffffff;
+}
+
+.painel-status-ponto {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--pn-apagado);
+}
+
+.painel-status-hora {
+  margin-left: auto;
+  color: var(--pn-apagado);
+  font-size: 0.78rem;
+}
+
+.painel-neon .painel-status--ativo {
+  border-color: rgba(127, 255, 106, 0.4);
+  background: linear-gradient(90deg, rgba(127, 255, 106, 0.12), rgba(12, 30, 18, 0.72) 60%);
+}
+
+.painel-neon .painel-status--ativo .painel-status-ponto {
+  background: var(--pn-neon);
+  box-shadow: 0 0 10px var(--pn-neon);
+  animation: painelPulso 1.8s ease-in-out infinite;
+}
+
+.painel-neon .painel-status--ativo strong {
+  color: var(--pn-neon);
+}
+
+.painel-neon .painel-status--off {
+  border-color: rgba(255, 193, 99, 0.35);
+}
+
+.painel-neon .painel-status--off .painel-status-ponto {
+  background: var(--pn-ambar);
+}
+
+.painel-neon .painel-status--off strong {
+  color: var(--pn-ambar);
+}
+
+.painel-neon .painel-status--vazio .painel-status-ponto {
+  background: var(--pn-azul);
+}
+
+/* ── Cartões (indicadores, painéis, cartões de campos e sensores) ── */
+.painel-neon .dashboard-kpi,
+.painel-neon .dashboard-panel,
+.painel-neon .analysis-card,
+.painel-neon .alert-card,
+.painel-neon .dashboard-empty-state,
+.painel-neon .report-automation,
+.painel-neon .field-card,
+.painel-neon .sensor-card,
+.painel-neon .account-section,
+.painel-neon .field-summary > div,
+.painel-neon .sensor-summary > div,
+.painel-neon .study-card {
+  position: relative;
+  border: 1px solid var(--pn-borda) !important;
+  border-radius: 20px;
+  /* Sem backdrop-filter nem transform: os dois prenderiam as janelas (position: fixed)
+     abertas de dentro dos cartões, como a de irrigação. O fundo já é quase opaco. */
+  background: linear-gradient(160deg, rgba(16, 40, 24, 0.92), rgba(6, 18, 12, 0.88)) !important;
+  box-shadow: var(--pn-sombra), inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+  color: var(--pn-texto);
+}
+
+.painel-neon .dashboard-kpi,
+.painel-neon .field-card,
+.painel-neon .sensor-card,
+.painel-neon .study-card {
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.painel-neon .dashboard-kpi:hover,
+.painel-neon .field-card:hover,
+.painel-neon .sensor-card:hover,
+.painel-neon .study-card:hover {
+  transform: none !important;
+  border-color: var(--pn-borda-forte) !important;
+  box-shadow: var(--pn-sombra), 0 0 30px -12px rgba(127, 255, 106, 0.6) !important;
+}
+
+/* Fio de luz no topo dos indicadores, alternando verde e azul. */
+.painel-neon .dashboard-kpi::before {
+  content: "";
+  position: absolute;
+  inset: 0 1.2rem auto;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, var(--pn-neon), transparent);
+  opacity: 0.8;
+}
+
+.painel-neon .dashboard-kpi:nth-child(even)::before {
+  background: linear-gradient(90deg, transparent, var(--pn-azul), transparent);
+}
+
+.painel-neon .dashboard-kpi-head {
+  color: var(--pn-suave);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.painel-neon .dashboard-kpi-value {
+  color: #ffffff !important;
+  font-size: 2.2rem !important;
+}
+
+.painel-neon .dashboard-kpi:nth-child(2) .dashboard-kpi-value,
+.painel-neon .dashboard-kpi:nth-child(3) .dashboard-kpi-value {
+  color: var(--pn-neon) !important;
+  text-shadow: 0 0 22px rgba(127, 255, 106, 0.35);
+}
+
+.painel-neon .dashboard-kpi-value small {
+  color: var(--pn-suave);
+}
+
+.painel-neon .dashboard-kpi-value.dashboard-kpi-text {
+  color: #ffffff !important;
+  font-size: 1.05rem !important;
+  line-height: 1.3;
+  text-shadow: none;
+}
+
+.painel-neon .dashboard-kpi-sub,
+.painel-neon .dashboard-empty-note,
+.painel-neon .dashboard-chart-demo-note {
+  color: var(--pn-apagado);
+}
+
+/* ── Abas e seletor de período ── */
+.painel-neon .dashboard-tabs,
+.painel-neon .range-select {
+  border: 1px solid var(--pn-borda);
+  background: var(--pn-campo);
+}
+
+.painel-neon .dashboard-tabs button,
+.painel-neon .range-select button {
+  color: var(--pn-suave);
+}
+
+.painel-neon .dashboard-tabs button:hover,
+.painel-neon .range-select button:hover {
+  color: #ffffff;
+  background: rgba(127, 255, 106, 0.08);
+}
+
+.painel-neon .dashboard-tabs button.active,
+.painel-neon .range-select button.active {
+  color: #06120a;
+  background: linear-gradient(110deg, var(--pn-neon), var(--pn-azul));
+  box-shadow: 0 0 16px -4px rgba(127, 255, 106, 0.8);
+}
+
+/* ── Gráfico de umidade ── */
+.painel-neon .dashboard-panel-head h2,
+.painel-neon .dashboard-panel h2 {
+  color: #ffffff;
+  font-size: 1.2rem !important;
+  line-height: 1.25;
+}
+
+.painel-neon .weather-heading h2,
+.painel-neon .ranking-panel h2 {
+  font-size: 1.05rem !important;
+  white-space: nowrap;
+}
+
+.painel-neon .dashboard-topbar h1 {
+  font-size: 1.85rem !important;
+}
+
+.painel-neon .chart-legend {
+  color: var(--pn-suave);
+}
+
+.painel-neon .chart-legend i.water { background: var(--pn-azul); box-shadow: 0 0 8px var(--pn-azul); }
+.painel-neon .chart-legend i.leaf { background: var(--pn-neon); box-shadow: 0 0 8px var(--pn-neon); }
+.painel-neon .chart-legend i.soil { background: var(--pn-ambar); box-shadow: 0 0 8px var(--pn-ambar); }
+.painel-neon .chart-legend i.violet { background: var(--pn-violeta); box-shadow: 0 0 8px var(--pn-violeta); }
+
+.chart-legend-valor {
+  margin-left: 0.3rem;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.painel-chart-wrap {
+  position: relative;
+}
+
+.painel-neon .moisture-chart .chart-grade line {
+  stroke: rgba(127, 255, 106, 0.1);
+  stroke-width: 1;
+}
+
+.painel-neon .moisture-chart .chart-grade text,
+.painel-neon .moisture-chart .chart-rotulos text {
+  fill: var(--pn-apagado);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+}
+
+.painel-neon .moisture-chart .chart-series {
+  fill: none;
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.painel-neon .moisture-chart .chart-series.water { stroke: var(--pn-azul); filter: drop-shadow(0 0 5px rgba(56, 214, 255, 0.8)); }
+.painel-neon .moisture-chart .chart-series.leaf { stroke: var(--pn-neon); filter: drop-shadow(0 0 5px rgba(127, 255, 106, 0.8)); }
+.painel-neon .moisture-chart .chart-series.soil { stroke: var(--pn-ambar); filter: drop-shadow(0 0 5px rgba(255, 193, 99, 0.7)); }
+.painel-neon .moisture-chart .chart-series.violet { stroke: var(--pn-violeta); filter: drop-shadow(0 0 5px rgba(201, 162, 255, 0.7)); }
+
+.painel-neon .moisture-chart .chart-point {
+  fill: #06120a;
+  stroke-width: 3;
+}
+
+.painel-neon .moisture-chart .chart-point.water { stroke: var(--pn-azul); }
+.painel-neon .moisture-chart .chart-point.leaf { stroke: var(--pn-neon); }
+.painel-neon .moisture-chart .chart-point.soil { stroke: var(--pn-ambar); }
+.painel-neon .moisture-chart .chart-point.violet { stroke: var(--pn-violeta); }
+
+/* Último ponto pulsando: deixa claro que é a leitura mais recente. */
+.painel-neon .moisture-chart .chart-point {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: painelPonto 2s ease-in-out infinite;
+}
+
+.painel-chart-vazio {
+  position: absolute;
+  inset: 8% 6% 18%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 1rem;
+  border: 1px dashed rgba(56, 214, 255, 0.35);
+  border-radius: 16px;
+  background: rgba(4, 14, 10, 0.72);
+  text-align: center;
+  color: var(--pn-suave);
+  font-size: 0.85rem;
+}
+
+.painel-chart-vazio svg {
+  color: var(--pn-azul);
+  filter: drop-shadow(0 0 8px rgba(56, 214, 255, 0.8));
+}
+
+.painel-chart-vazio strong {
+  color: #ffffff;
+  font-family: 'Syne', sans-serif;
+  font-size: 1rem;
+}
+
+/* Cartão "Última leitura": tempo em azul, atualizado a cada 5 s. */
+.painel-neon .dashboard-kpi-value.dashboard-kpi-tempo {
+  color: var(--pn-azul) !important;
+  font-size: 1.7rem !important;
+  text-shadow: 0 0 22px rgba(56, 214, 255, 0.4);
+}
+
+/* Dica ao passar o mouse no gráfico. */
+.painel-neon .chart-destaque line {
+  stroke: rgba(255, 255, 255, 0.35);
+  stroke-dasharray: 3 4;
+}
+
+.painel-neon .chart-destaque-ponto {
+  fill: #ffffff;
+  stroke-width: 3;
+}
+
+.painel-neon .chart-destaque-ponto.water { stroke: var(--pn-azul); }
+.painel-neon .chart-destaque-ponto.leaf { stroke: var(--pn-neon); }
+.painel-neon .chart-destaque-ponto.soil { stroke: var(--pn-ambar); }
+.painel-neon .chart-destaque-ponto.violet { stroke: var(--pn-violeta); }
+
+.chart-dica {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  gap: 0.1rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid rgba(56, 214, 255, 0.45);
+  border-radius: 12px;
+  background: rgba(4, 14, 10, 0.94);
+  box-shadow: 0 12px 26px -12px rgba(0, 0, 0, 0.8), 0 0 18px -6px rgba(56, 214, 255, 0.6);
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translate(-50%, calc(-100% - 14px));
+}
+
+.chart-dica strong {
+  color: #ffffff;
+  font-family: 'Syne', sans-serif;
+  font-size: 1.05rem;
+}
+
+.chart-dica span {
+  color: var(--pn-texto, #e8f0e9);
+  font-size: 0.78rem;
+}
+
+.chart-dica small {
+  color: var(--pn-suave, #9fb8a2);
+  font-size: 0.72rem;
+}
+
+/* ── Primeiros passos (some quando o primeiro ESP32 envia leitura) ── */
+/* .painel-neon na frente: vence o ".dashboard-light section { padding: 0 }" dos estilos antigos. */
+.painel-neon .primeiros-passos {
+  margin-bottom: 20px;
+  padding: 1.3rem 1.5rem 1.2rem;
+  border: 1px solid rgba(56, 214, 255, 0.35);
+  border-radius: 20px;
+  background:
+    radial-gradient(ellipse at 100% 0%, rgba(56, 214, 255, 0.12), transparent 55%),
+    linear-gradient(160deg, rgba(16, 40, 24, 0.92), rgba(6, 18, 12, 0.88));
+  box-shadow: var(--pn-sombra), 0 0 40px -22px rgba(56, 214, 255, 0.8);
+}
+
+.primeiros-passos-topo {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.painel-neon .primeiros-passos h2 {
+  margin: 0.2rem 0 0;
+  font-size: 1.2rem !important;
+}
+
+.primeiros-passos-contagem {
+  color: var(--pn-azul);
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+}
+
+.primeiros-passos-barra {
+  height: 4px;
+  margin: 0.9rem 0 1rem;
+  overflow: hidden;
+  border-radius: 4px;
+  background: rgba(127, 255, 106, 0.1);
+}
+
+.primeiros-passos-barra span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--pn-neon), var(--pn-azul));
+  box-shadow: 0 0 10px rgba(127, 255, 106, 0.7);
+  transition: width 0.6s var(--pn-ease);
+}
+
+.primeiros-passos ol {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.8rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.primeiros-passos li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.9rem;
+  border: 1px solid var(--pn-borda);
+  border-radius: 14px;
+  background: var(--pn-vidro-claro);
+  opacity: 0.65;
+}
+
+.primeiros-passos li.is-feito,
+.primeiros-passos li.is-proximo {
+  opacity: 1;
+}
+
+.primeiros-passos li.is-proximo {
+  border-color: rgba(56, 214, 255, 0.55);
+  background: rgba(56, 214, 255, 0.07);
+  box-shadow: 0 0 22px -10px rgba(56, 214, 255, 0.9);
+}
+
+.primeiros-passos-icone {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--pn-borda);
+  border-radius: 9px;
+  color: var(--pn-suave);
+}
+
+.primeiros-passos li.is-feito .primeiros-passos-icone {
+  border-color: var(--pn-neon);
+  background: var(--pn-neon);
+  color: #06120a;
+  box-shadow: 0 0 12px -2px var(--pn-neon);
+}
+
+.primeiros-passos li.is-proximo .primeiros-passos-icone {
+  border-color: var(--pn-azul);
+  color: var(--pn-azul);
+}
+
+.primeiros-passos strong {
+  display: block;
+  color: #ffffff;
+  font-size: 0.9rem;
+}
+
+.primeiros-passos li.is-feito strong {
+  color: var(--pn-neon);
+}
+
+.primeiros-passos small {
+  display: block;
+  margin-top: 0.15rem;
+  color: var(--pn-suave);
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+.primeiros-passos a {
+  margin-top: auto;
+  color: var(--pn-azul);
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.primeiros-passos a:hover {
+  color: #ffffff;
+  text-shadow: 0 0 10px rgba(56, 214, 255, 0.8);
+}
+
+@media (max-width: 1100px) {
+  .primeiros-passos ol {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 680px) {
+  .primeiros-passos ol {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Tabela de dispositivos ── */
+.painel-neon .sensor-table-wrap {
+  border-top-color: var(--pn-borda);
+}
+
+.painel-neon .sensor-table-wrap th {
+  color: var(--pn-apagado);
+}
+
+.painel-neon .sensor-table-wrap td {
+  border-top-color: rgba(127, 255, 106, 0.08);
+  color: var(--pn-texto);
+}
+
+.painel-neon .sensor-table-wrap tbody tr {
+  transition: background-color 0.2s ease;
+}
+
+.painel-neon .sensor-table-wrap tbody tr:hover {
+  background: rgba(127, 255, 106, 0.04);
+}
+
+.painel-neon .table-badge.good,
+.painel-neon .status-tag.good,
+.painel-neon .severity-pill.baixa {
+  border: 1px solid rgba(127, 255, 106, 0.45);
+  background: rgba(127, 255, 106, 0.12);
+  color: var(--pn-neon);
+  box-shadow: 0 0 12px -4px rgba(127, 255, 106, 0.8);
+}
+
+.painel-neon .table-badge.warning,
+.painel-neon .status-tag.warning,
+.painel-neon .severity-pill.média {
+  border: 1px solid rgba(255, 193, 99, 0.4);
+  background: rgba(255, 193, 99, 0.1);
+  color: var(--pn-ambar);
+}
+
+.painel-neon .table-badge.bad,
+.painel-neon .status-tag.bad,
+.painel-neon .severity-pill.alta {
+  border: 1px solid rgba(255, 138, 122, 0.4);
+  background: rgba(255, 110, 100, 0.1);
+  color: var(--pn-vermelho);
+}
+
+/* ── Lista de campos e ações rápidas ── */
+.painel-neon .ranking-item,
+.painel-neon .weather-heading {
+  border-color: var(--pn-borda);
+}
+
+.painel-neon .rank-number {
+  border: 1px solid rgba(127, 255, 106, 0.35);
+  background: rgba(127, 255, 106, 0.1);
+  color: var(--pn-neon);
+}
+
+.painel-neon .rank-info strong,
+.painel-neon .rank-value strong {
+  color: #ffffff;
+}
+
+.painel-neon .rank-info small,
+.painel-neon .rank-value small {
+  color: var(--pn-apagado);
+}
+
+.painel-neon .dashboard-quick-links a {
+  border: 1px solid var(--pn-borda);
+  background: var(--pn-vidro-claro);
+  color: var(--pn-texto);
+  transition: border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.painel-neon .dashboard-quick-links a:hover {
+  border-color: var(--pn-neon);
+  background: rgba(127, 255, 106, 0.08);
+  color: var(--pn-neon);
+  transform: translateY(-2px);
+  box-shadow: 0 0 18px -6px rgba(127, 255, 106, 0.7);
+}
+
+.painel-neon .dashboard-quick-links svg {
+  color: var(--pn-azul);
+}
+
+/* ── Relatórios, alertas e estados vazios ── */
+.painel-neon .dashboard-reports-panel {
+  background: transparent;
+}
+
+.painel-neon .section-kicker,
+.painel-neon .sensor-eyebrow,
+.painel-neon .field-eyebrow {
+  color: var(--pn-neon) !important;
+  letter-spacing: 0.18em;
+}
+
+.painel-neon .report-lead,
+.painel-neon .alerts-lead,
+.painel-neon .report-automation-copy,
+.painel-neon .dashboard-empty-state p,
+.painel-neon .sensor-page-header > p:last-child,
+.painel-neon .field-page-header > p:last-child {
+  color: var(--pn-suave) !important;
+}
+
+.painel-neon .dashboard-empty-state strong,
+.painel-neon .report-automation-heading h3 {
+  color: #ffffff;
+}
+
+.painel-neon .dashboard-empty-state > svg {
+  color: var(--pn-azul);
+}
+
+.painel-neon .dashboard-empty-state a {
+  color: var(--pn-neon);
+}
+
+.painel-neon .report-automation-icon {
+  border: 1px solid rgba(56, 214, 255, 0.4);
+  background: rgba(56, 214, 255, 0.1);
+  color: var(--pn-azul);
+}
+
+.painel-neon .report-automation-save,
+.painel-neon .sensor-irrigate-btn,
+.painel-neon .account-section button[type="submit"],
+.painel-neon .bg-\[\#1f3a2b\] {
+  border: none !important;
+  background: linear-gradient(110deg, var(--pn-neon), #5cf08a 45%, var(--pn-azul)) !important;
+  color: #06120a !important;
+  font-weight: 800;
+  box-shadow: 0 12px 26px -14px rgba(127, 255, 106, 0.9);
+  transition: transform 0.2s var(--pn-ease), filter 0.2s ease, box-shadow 0.2s ease;
+}
+
+.painel-neon .report-automation-save:hover:not(:disabled),
+.painel-neon .sensor-irrigate-btn:hover,
+.painel-neon .account-section button[type="submit"]:hover:not(:disabled),
+.painel-neon .bg-\[\#1f3a2b\]:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.06);
+  box-shadow: 0 16px 30px -14px rgba(127, 255, 106, 1), 0 0 20px -8px rgba(56, 214, 255, 0.8);
+}
+
+.painel-neon .report-automation-warning,
+.painel-neon .field-demo-notice,
+.painel-neon .sensor-demo-notice,
+.painel-neon .bg-amber-50 {
+  border: 1px solid rgba(255, 193, 99, 0.35) !important;
+  background: rgba(255, 193, 99, 0.08) !important;
+  color: #ffd99a !important;
+  --tw-ring-color: transparent;
+}
+
+.painel-neon .report-automation-success,
+.painel-neon .text-emerald-800 {
+  color: var(--pn-neon) !important;
+}
+
+.painel-neon .dashboard-data-error,
+.painel-neon .bg-red-50 {
+  border: 1px solid rgba(255, 138, 122, 0.35) !important;
+  background: rgba(255, 110, 100, 0.08) !important;
+  color: #ffb3ab !important;
+}
+
+.painel-neon .text-red-700,
+.painel-neon .text-red-800,
+.painel-neon .text-red-600 {
+  color: var(--pn-vermelho) !important;
+}
+
+/* ── Sensores e campos ── */
+.painel-neon .sensor-page,
+.painel-neon .field-page {
+  background: transparent !important;
+  color: var(--pn-texto) !important;
+}
+
+.painel-neon .sensor-page-header h1,
+.painel-neon .field-page-header h1 {
+  color: #ffffff !important;
+}
+
+.painel-neon .metric-label {
+  color: var(--pn-suave);
+}
+
+.painel-neon .metric-value {
+  color: var(--pn-neon) !important;
+  text-shadow: 0 0 18px rgba(127, 255, 106, 0.3);
+}
+
+.painel-neon .sensor-card h3,
+.painel-neon .field-card h3 {
+  color: #ffffff !important;
+}
+
+.painel-neon .sensor-reading-value {
+  color: var(--pn-azul) !important;
+  text-shadow: 0 0 18px rgba(56, 214, 255, 0.45);
+}
+
+.painel-neon .sensor-meter-track {
+  background: rgba(127, 255, 106, 0.1);
+}
+
+.painel-neon .sensor-reading-point {
+  background: var(--pn-azul) !important;
+  box-shadow: 0 0 10px var(--pn-azul);
+}
+
+.painel-neon .sensor-sparkline-line {
+  stroke: var(--pn-azul) !important;
+  filter: drop-shadow(0 0 4px rgba(56, 214, 255, 0.8));
+}
+
+.painel-neon .sensor-sparkline-area {
+  fill: rgba(56, 214, 255, 0.14) !important;
+}
+
+.painel-neon .sensor-metadata,
+.painel-neon .field-note {
+  border-color: var(--pn-borda) !important;
+  color: var(--pn-suave) !important;
+}
+
+.painel-neon .sensor-metadata svg {
+  color: var(--pn-neon);
+}
+
+.painel-neon .field-card dl > div {
+  border: 1px solid var(--pn-borda);
+  background: var(--pn-vidro-claro);
+}
+
+.painel-neon .field-card dl dt {
+  color: var(--pn-apagado);
+}
+
+.painel-neon .field-card dl dd {
+  color: #ffffff;
+}
+
+.painel-neon .sensor-add-card,
+.painel-neon .field-add-card {
+  border: 2px dashed rgba(127, 255, 106, 0.35) !important;
+  background: rgba(127, 255, 106, 0.03) !important;
+  color: var(--pn-suave);
+  transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.painel-neon .sensor-add-card:hover,
+.painel-neon .field-add-card:hover {
+  border-color: var(--pn-neon) !important;
+  background: rgba(127, 255, 106, 0.07) !important;
+  box-shadow: 0 0 30px -12px rgba(127, 255, 106, 0.7);
+}
+
+.painel-neon .sensor-account-link {
+  border: 1px solid var(--pn-borda);
+  background: var(--pn-vidro-claro) !important;
+  color: var(--pn-texto) !important;
+}
+
+.painel-neon .sensor-account-link:hover {
+  border-color: var(--pn-neon);
+  background: rgba(127, 255, 106, 0.08) !important;
+}
+
+.painel-neon .sensor-account-link small {
+  color: var(--pn-suave);
+}
+
+/* ── Estudos agrícolas ── */
+/* A biblioteca usa variáveis próprias: basta trocá-las pelas cores do tema. */
+.painel-neon .study-library {
+  --study-paper: transparent;
+  --study-ink: #ffffff;
+  --study-muted: var(--pn-suave);
+  --study-green: var(--pn-neon);
+  --study-rust: var(--pn-ambar);
+  --study-line: var(--pn-borda);
+  background: transparent !important;
+}
+
+.painel-neon .study-library-count strong {
+  text-shadow: 0 0 18px rgba(255, 193, 99, 0.4);
+}
+
+.painel-neon .study-complete-button.completed {
+  border-color: var(--pn-neon) !important;
+  background: linear-gradient(110deg, var(--pn-neon), var(--pn-azul)) !important;
+  color: #06120a !important;
+}
+
+.painel-neon .study-search-field,
+.painel-neon .study-filter-field select {
+  border-color: var(--pn-borda) !important;
+  background: var(--pn-campo) !important;
+  color: var(--pn-texto) !important;
+}
+
+.painel-neon [class*="study-"] h1,
+.painel-neon [class*="study-"] h2,
+.painel-neon [class*="study-"] h3,
+.painel-neon .study-card h3 {
+  color: #ffffff;
+}
+
+.painel-neon [class*="study-"] p,
+.painel-neon [class*="study-"] li {
+  color: var(--pn-suave);
+}
+
+.painel-neon .study-tags span {
+  border-color: var(--pn-borda);
+  color: var(--pn-suave);
+}
+
+.painel-neon .study-book-header,
+.painel-neon .study-callout,
+.painel-neon .study-references a,
+.painel-neon .study-complete-button,
+.painel-neon .study-chapter-actions > div button {
+  border-color: var(--pn-borda) !important;
+  background: var(--pn-vidro) !important;
+  color: var(--pn-texto) !important;
+}
+
+.painel-neon .study-callout.attention {
+  border-color: rgba(255, 193, 99, 0.35) !important;
+  background: rgba(255, 193, 99, 0.07) !important;
+}
+
+.painel-neon .study-progress-track {
+  background: rgba(127, 255, 106, 0.12);
+}
+
+.painel-neon .study-toc button {
+  color: var(--pn-suave);
+}
+
+.painel-neon .study-toc button:hover,
+.painel-neon .study-toc button.active {
+  background: rgba(127, 255, 106, 0.1) !important;
+  color: var(--pn-neon);
+}
+
+/* ── Conta ── */
+.painel-neon .account-page {
+  background: transparent !important;
+  color: var(--pn-texto) !important;
+}
+
+.painel-neon .account-heading h1 {
+  color: #ffffff !important;
+}
+
+.painel-neon .account-tabs {
+  border: 1px solid var(--pn-borda) !important;
+  background: var(--pn-campo) !important;
+}
+
+.painel-neon .account-tab {
+  color: var(--pn-suave);
+}
+
+.painel-neon .account-tab:hover {
+  background: rgba(127, 255, 106, 0.08) !important;
+  color: #ffffff !important;
+}
+
+.painel-neon .account-tab.active {
+  background: linear-gradient(110deg, var(--pn-neon), var(--pn-azul)) !important;
+  color: #06120a !important;
+  box-shadow: 0 0 18px -6px rgba(127, 255, 106, 0.9);
+}
+
+.painel-neon .account-section h2 {
+  color: #ffffff !important;
+}
+
+.painel-neon .account-section label > span,
+.painel-neon .account-section .text-slate-400 {
+  color: var(--pn-suave) !important;
+}
+
+.painel-neon .account-section .bg-slate-900\/50 {
+  background: var(--pn-vidro-claro) !important;
+}
+
+.painel-neon .account-section .border-white\/10 {
+  border-color: var(--pn-borda) !important;
+}
+
+.painel-neon .account-feedback.success {
+  border: 1px solid rgba(127, 255, 106, 0.4);
+  background: rgba(127, 255, 106, 0.08);
+  color: var(--pn-neon);
+}
+
+.painel-neon .account-feedback.error {
+  border-color: rgba(255, 138, 122, 0.35);
+  background: rgba(255, 110, 100, 0.08);
+  color: #ffb3ab;
+}
+
+/* ── Campos de formulário (painel, conta e janelas) ── */
+.painel-neon input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+.painel-neon select,
+.painel-neon textarea,
+.painel-neon .account-section input,
+.painel-neon .account-section select,
+.painel-neon .report-automation-frequency select {
+  border-color: rgba(127, 255, 106, 0.2) !important;
+  background-color: var(--pn-campo) !important;
+  color: var(--pn-texto) !important;
+}
+
+.painel-neon input::placeholder,
+.painel-neon textarea::placeholder {
+  color: rgba(232, 240, 233, 0.3) !important;
+}
+
+.painel-neon input:focus,
+.painel-neon select:focus,
+.painel-neon textarea:focus {
+  border-color: var(--pn-neon) !important;
+  box-shadow: 0 0 0 3px rgba(127, 255, 106, 0.14), 0 0 18px -6px rgba(127, 255, 106, 0.6) !important;
+  outline: none !important;
+}
+
+.painel-neon select option {
+  background: #0b1d12;
+  color: var(--pn-texto);
+}
+
+/* ── Classes do Tailwind com cores claras (cartões, menus e janelas) ── */
+.painel-neon .bg-white,
+.painel-neon .bg-\[\#F4F0E6\],
+.painel-neon .bg-\[\#f4f1ea\] {
+  background-color: transparent !important;
+}
+
+/* Janelas (modais) e menus suspensos ficam como vidro escuro sólido. */
+.painel-neon .fixed.inset-0 > .bg-white,
+.painel-neon .fixed.inset-0 > div > .bg-white,
+.painel-neon .absolute.bg-white,
+.painel-neon .shadow-lg.bg-white,
+.painel-neon .rounded-3xl.bg-white.shadow-xl,
+.painel-neon .rounded-3xl.bg-white.shadow-2xl {
+  border: 1px solid var(--pn-borda-forte);
+  background: linear-gradient(160deg, #0f2a19, #07150d) !important;
+  box-shadow: 0 30px 70px -20px rgba(0, 0, 0, 0.85), 0 0 50px -20px rgba(127, 255, 106, 0.5) !important;
+  color: var(--pn-texto);
+}
+
+.painel-neon .fixed.inset-0 {
+  background-color: rgba(2, 8, 5, 0.7) !important;
+}
+
+/* Blocos internos claros (métricas dentro dos cartões). */
+.painel-neon .rounded-2xl.bg-\[\#f4f1ea\] {
+  border: 1px solid var(--pn-borda);
+  background: var(--pn-vidro-claro) !important;
+}
+
+.painel-neon .text-stone-900,
+.painel-neon .text-stone-800,
+.painel-neon .text-\[\#243126\],
+.painel-neon .text-\[\#1f3a2b\] {
+  color: #ffffff !important;
+}
+
+.painel-neon .text-stone-700,
+.painel-neon .text-stone-600,
+.painel-neon .text-\[\#687263\] {
+  color: #c4d6c5 !important;
+}
+
+.painel-neon .text-stone-500,
+.painel-neon .text-stone-400 {
+  color: var(--pn-suave) !important;
+}
+
+.painel-neon .text-\[\#3A7D44\] {
+  color: var(--pn-neon) !important;
+}
+
+.painel-neon .text-amber-900 {
+  color: #ffd99a !important;
+}
+
+.painel-neon .border-stone-200,
+.painel-neon .border-stone-300,
+.painel-neon .border-\[\#efeadc\],
+.painel-neon .border-\[\#e3ddcd\] {
+  border-color: var(--pn-borda) !important;
+}
+
+.painel-neon .ring-1 {
+  --tw-ring-color: var(--pn-borda) !important;
+}
+
+.painel-neon .hover\:bg-stone-100:hover,
+.painel-neon .hover\:bg-stone-50:hover,
+.painel-neon .focus\:bg-red-50:focus,
+.painel-neon .hover\:bg-red-50:hover {
+  background-color: rgba(127, 255, 106, 0.08) !important;
+}
+
+.painel-neon .hover\:text-stone-800:hover {
+  color: #ffffff !important;
+}
+
+.painel-neon .bg-\[\#1f3a2b\]\/10 {
+  border: 1px solid rgba(127, 255, 106, 0.35);
+  background-color: rgba(127, 255, 106, 0.1) !important;
+  color: var(--pn-neon) !important;
+}
+
+.painel-neon .bg-\[\#3A7D44\] {
+  background: linear-gradient(135deg, var(--pn-neon), var(--pn-azul)) !important;
+  color: #06120a !important;
+}
+
+.painel-neon .focus\:ring-\[\#1f3a2b\]\/40:focus {
+  --tw-ring-color: rgba(127, 255, 106, 0.45) !important;
+}
+
+/* Cartões de sensor e de campo: título, umidade e selo de conexão. */
+.painel-neon .sensor-card h3,
+.painel-neon .field-card h3 {
+  font-size: 1.05rem !important;
+  line-height: 1.25 !important;
+}
+
+.painel-neon .sensor-card .sensor-reading-value {
+  color: var(--pn-azul) !important;
+}
+
+.painel-neon .sensor-status-pill.bg-emerald-100 {
+  border: 1px solid rgba(127, 255, 106, 0.45);
+  background: rgba(127, 255, 106, 0.12) !important;
+  color: var(--pn-neon) !important;
+  box-shadow: 0 0 12px -4px rgba(127, 255, 106, 0.8);
+}
+
+.painel-neon .sensor-status-pill.bg-stone-100 {
+  border: 1px solid rgba(255, 193, 99, 0.4);
+  background: rgba(255, 193, 99, 0.1) !important;
+  color: var(--pn-ambar) !important;
+}
+
+/* Selos de status dos comandos de irrigação e demais tons do Tailwind. */
+.painel-neon .bg-emerald-50,
+.painel-neon .bg-emerald-100 {
+  background-color: rgba(127, 255, 106, 0.12) !important;
+  box-shadow: inset 0 0 0 1px rgba(127, 255, 106, 0.4);
+}
+
+.painel-neon .text-emerald-800,
+.painel-neon .text-emerald-300,
+.painel-neon .text-emerald-400 {
+  color: var(--pn-neon) !important;
+}
+
+.painel-neon .bg-sky-50 {
+  background-color: rgba(56, 214, 255, 0.12) !important;
+  box-shadow: inset 0 0 0 1px rgba(56, 214, 255, 0.4);
+}
+
+.painel-neon .text-sky-800 {
+  color: var(--pn-azul) !important;
+}
+
+.painel-neon .text-amber-800 {
+  color: var(--pn-ambar) !important;
+}
+
+.painel-neon .bg-stone-50,
+.painel-neon .bg-stone-100 {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+.painel-neon code.bg-stone-100 {
+  color: var(--pn-azul);
+}
+
+.painel-neon .text-slate-100 {
+  color: #ffffff !important;
+}
+
+.painel-neon .text-slate-400,
+.painel-neon .text-slate-500 {
+  color: var(--pn-suave) !important;
+}
+
+.painel-neon .bg-emerald-600,
+.painel-neon .bg-emerald-700 {
+  background: linear-gradient(110deg, var(--pn-neon), var(--pn-azul)) !important;
+  color: #06120a !important;
+}
+
+/* Botões de duração na janela de irrigação. */
+.painel-neon .border-stone-300.text-stone-700:hover {
+  border-color: var(--pn-neon) !important;
+  color: var(--pn-neon) !important;
+}
+
+/* ── Celular: barra de navegação inferior ── */
+@media (max-width: 680px) {
+  .painel-neon .dashboard-sidebar {
+    position: fixed;
+    top: auto;
+    height: 76px;
+    border-right: 0;
+    border-top: 1px solid var(--pn-borda-forte);
+    background: rgba(4, 12, 8, 0.94);
+    box-shadow: 0 -10px 30px -10px rgba(127, 255, 106, 0.3);
+  }
+
+  .painel-neon .dashboard-nav-item.active,
+  .painel-neon .dashboard-nav-item.account-active {
+    box-shadow: inset 0 2px var(--pn-neon);
+  }
+
+  .painel-status-hora {
+    margin-left: 0;
+  }
+}
+
+@keyframes painelPulso {
+  50% {
+    box-shadow: 0 0 0 6px rgba(127, 255, 106, 0), 0 0 14px var(--pn-neon);
+  }
+}
+
+@keyframes painelPonto {
+  50% {
+    transform: scale(1.35);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .painel-neon .moisture-chart .chart-point,
+  .painel-neon .painel-status--ativo .painel-status-ponto {
+    animation: none;
+  }
+
+  .painel-neon .dashboard-kpi:hover,
+  .painel-neon .field-card:hover,
+  .painel-neon .sensor-card:hover,
+  .painel-neon .study-card:hover {
+    transform: none;
+  }
+}

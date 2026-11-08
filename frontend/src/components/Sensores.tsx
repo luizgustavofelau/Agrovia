@@ -102,7 +102,7 @@ export default function Sensores() {
         <p className="sensor-eyebrow">Telemetria</p>
         <h1 className="text-3xl font-semibold text-stone-900">Dispositivos e sensores</h1>
         <p className="mt-1 text-stone-500">
-          Consulte dispositivos vinculados. Leituras dependem de integração de telemetria.
+          Acompanhe as leituras dos ESP32, gere a chave de cada aparelho e envie comandos de irrigação.
         </p>
       </header>
 
