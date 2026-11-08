@@ -104,7 +104,7 @@ const RedefinirSenha: React.FC = () => {
       )}
 
       <p className="login-switch">Lembrou a senha? <Link to="/login">Entrar</Link></p>
-      <footer className="login-footer">© 2026 AgroVia — Tecnologia para o Campo</footer>
+      <footer className="login-footer">© 2026 Agrovia · TCC UNASP Engenheiro Coelho</footer>
     </AuthLayout>
   );
 };

@@ -62,7 +62,7 @@ const Login: React.FC = () => {
       vitrineTexto="Organize campos e dispositivos e consulte estudos agrícolas. As leituras dependem dos sensores e integrações ativos."
       destaques={destaques}
     >
-      <AuthCabecalho titulo="Seja bem-vindo" subtitulo="Entre com suas credenciais para acessar o painel" />
+      <AuthCabecalho titulo="Acessar o painel" subtitulo="Acompanhe seus campos, sensores e leituras." />
 
       <form onSubmit={handleSubmit} className="login-form">
         {!sessaoExpirada && <SessaoAberta />}
@@ -129,7 +129,7 @@ const Login: React.FC = () => {
               <span>Entrando...</span>
             </>
           ) : (
-            <>Entrar no Painel <span aria-hidden="true">→</span></>
+            <>Entrar <span aria-hidden="true">→</span></>
           )}
         </button>
       </form>
@@ -139,7 +139,7 @@ const Login: React.FC = () => {
       </p>
 
       <footer className="login-footer">
-        © 2026 AgroVia — Tecnologia para o Campo
+        © 2026 Agrovia · TCC UNASP Engenheiro Coelho
       </footer>
     </AuthLayout>
   );

@@ -1,10 +1,12 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AlertTriangle, ArrowLeft, Eye, EyeOff, LucideIcon } from "lucide-react";
-import { ChuvaDistante, IrrigadorTopo } from "./HeroIrrigacao";
 import "../styles/login.css";
 
-type Destaque = { icone: LucideIcon; titulo: string; detalhe: string };
+const LOGO_SRC = `${process.env.PUBLIC_URL}/img/logo-agrovia.png`;
+const FOTO_SRC = `${process.env.PUBLIC_URL}/img/fundo-login.jpg`;
+
+type Destaque = { icone?: LucideIcon; titulo: string; detalhe: string };
 
 type AuthLayoutProps = {
   /** Título da vitrine; `destaque` aparece em verde neon na segunda linha. */
@@ -18,30 +20,38 @@ type AuthLayoutProps = {
 };
 
 /**
+ * Divisa em onda entre a foto e o formulário, com o fio neon das ondas da página inicial.
+ * No computador a onda é vertical (borda esquerda do painel); no celular, horizontal (topo).
+ */
+const OndaDivisa: React.FC = () => (
+  <>
+    <svg className="auth-onda auth-onda--vertical" viewBox="0 0 120 1440" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+      <path d="M120 0H50C2 260 26 500 58 720C90 940 8 1180 66 1440H120Z" />
+      <path className="auth-onda-linha" d="M50 0C2 260 26 500 58 720C90 940 8 1180 66 1440" />
+    </svg>
+    <svg className="auth-onda auth-onda--horizontal" viewBox="0 0 1440 120" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+      <path d="M0 70C260 118 500 94 720 62C940 30 1180 112 1440 54V120H0Z" />
+      <path className="auth-onda-linha" d="M0 70C260 118 500 94 720 62C940 30 1180 112 1440 54" />
+    </svg>
+  </>
+);
+
+/**
  * Moldura das telas de entrada (login, cadastro e nova senha), com a identidade da página
- * inicial: malha neon com chuva ao fundo, o irrigador girando na vitrine e o cartão de vidro.
- * Sem `vitrineTitulo`, mostra só o cartão centralizado.
+ * inicial: foto do campo com o título grande à esquerda e o formulário num painel escuro
+ * à direita. Sem `vitrineTitulo`, mostra só o formulário centralizado.
  */
 export const AuthLayout: React.FC<AuthLayoutProps> = ({ vitrineTitulo, vitrineDestaque, vitrineTexto, destaques = [], compacto = false, children }) => (
-  <div className="auth-page">
-    <div className="auth-fundo" aria-hidden="true">
-      <ChuvaDistante />
-    </div>
+  <div className={`auth-page${vitrineTitulo ? "" : " auth-page--single"}${compacto ? " auth-page--compacto" : ""}`}>
+    {vitrineTitulo && (
+      <aside className="auth-vitrine" style={{ "--auth-foto": `url(${FOTO_SRC})` } as React.CSSProperties}>
+        <Link to="/" className="auth-marca" aria-label="Agrovia, voltar para a página inicial">
+          <img src={LOGO_SRC} alt="" width="38" height="38" />
+          <span className="auth-marca-palavra">AGRO<span>VIA</span></span>
+        </Link>
 
-    <Link to="/" className="auth-voltar">
-      <ArrowLeft size={16} aria-hidden="true" /> Voltar ao início
-    </Link>
-
-    <div className={`auth-shell${vitrineTitulo ? "" : " auth-shell--single"}${compacto ? " auth-shell--largo" : ""}`}>
-      {vitrineTitulo && (
-        <aside className="auth-vitrine">
-          <div className="auth-irrigador" aria-hidden="true">
-            <span className="auth-orbita" />
-            <span className="auth-orbita auth-orbita--interna" />
-            <IrrigadorTopo />
-          </div>
-
-          <span className="auth-pill">Agrovia IoT</span>
+        <div className="auth-vitrine-conteudo">
+          <p className="auth-eyebrow">Irrigação inteligente</p>
           <h2>
             {vitrineTitulo} {vitrineDestaque && <span className="auth-neon">{vitrineDestaque}</span>}
           </h2>
@@ -49,22 +59,25 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ vitrineTitulo, vitrineDe
 
           {destaques.length > 0 && (
             <ul className="auth-destaques">
-              {destaques.map(({ icone: Icone, titulo, detalhe }) => (
+              {destaques.map(({ titulo, detalhe }) => (
                 <li key={titulo}>
-                  <span className="auth-destaque-icone"><Icone size={20} aria-hidden="true" /></span>
-                  <div>
-                    <strong>{titulo}</strong>
-                    <small>{detalhe}</small>
-                  </div>
+                  <strong>{titulo}</strong>
+                  <small>{detalhe}</small>
                 </li>
               ))}
             </ul>
           )}
-        </aside>
-      )}
+        </div>
+      </aside>
+    )}
 
+    <main className="auth-lado-form">
+      {vitrineTitulo && <OndaDivisa />}
+      <Link to="/" className="auth-voltar">
+        <ArrowLeft size={15} aria-hidden="true" /> Voltar ao início
+      </Link>
       <div className={`login-card${compacto ? " login-card--compacto" : ""}`}>{children}</div>
-    </div>
+    </main>
   </div>
 );
 
@@ -74,7 +87,7 @@ export const AuthCabecalho: React.FC<{ titulo: string; subtitulo: string }> = ({
   return (
     <header className="login-header">
       <button type="button" className="login-logo" onClick={() => navigate("/")} aria-label="Voltar para a página inicial">
-        <img src={`${process.env.PUBLIC_URL}/img/logo-agrovia.png`} alt="" />
+        <img src={LOGO_SRC} alt="" />
         <span className="login-logo-word">AGRO<span>VIA</span></span>
       </button>
       <h1 className="login-title">{titulo}</h1>

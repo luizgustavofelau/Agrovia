@@ -1,5 +1,5 @@
 import React from 'react';
-import { BarChart3, BookOpen, Bell, Gauge, Leaf, Sprout, UserRound, Wifi } from 'lucide-react';
+import { BarChart3, BookOpen, Bell, Gauge, Sprout, UserRound, Wifi } from 'lucide-react';
 import { Link, NavLink } from 'react-router-dom';
 
 const items = [
@@ -20,13 +20,15 @@ export default function Sidebar() {
       title="Ir para a página inicial"
       className="dashboard-brand group cursor-pointer rounded-lg no-underline text-inherit transition duration-200 ease-out hover:scale-[1.02] hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0F1A10] motion-reduce:transition-none motion-reduce:hover:scale-100"
     >
-      <div className="brand-mark"><Leaf size={21} className="transition-transform duration-200 ease-out group-hover:rotate-6 motion-reduce:transition-none motion-reduce:group-hover:rotate-0" /></div>
-      <div>
-        <div className="dashboard-brand-name">Agrovia</div>
-        <div className="dashboard-brand-sub">MONITORAMENTO DE SOLO</div>
-      </div>
+      <img src={`${process.env.PUBLIC_URL}/img/logo-agrovia.png`} alt="" className="brand-logo" width="28" height="28" />
+      <div className="dashboard-brand-name">AGRO<span>VIA</span></div>
     </Link>
     <nav className="dashboard-nav" aria-label="Navegação principal">{items.map(({ label, to, icon: Icon }) => <NavLink key={label} to={to} end={to === '/painel'} className={({ isActive }) => `dashboard-nav-item ${isActive ? (label === 'Conta' ? 'account-active' : 'active') : ''}`}><Icon size={17} aria-hidden="true" /><span>{label}</span></NavLink>)}</nav>
-    <div className="dashboard-sidebar-footer">Organização agrícola<br /><strong>Campos · Sensores · Estudos</strong></div>
+    <div className="dashboard-sidebar-footer">© 2026 Agrovia</div>
+    {/* Onda com fio neon na borda do menu, como as passagens da página inicial. */}
+    <svg className="painel-onda" viewBox="0 0 40 1440" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+      <path d="M0 0H12C34 260 26 500 8 720C-6 940 30 1180 16 1440H0Z" />
+      <path className="painel-onda-linha" d="M12 0C34 260 26 500 8 720C-6 940 30 1180 16 1440" />
+    </svg>
   </aside>;
 }
