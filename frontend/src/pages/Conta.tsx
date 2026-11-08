@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 import Sidebar from "../components/Sidebar";
 import "../styles/account.css";
+import "../styles/painel-neon.css";
+import { useTituloPagina } from '../hooks/useTituloPagina';
 
 type Tab = "perfil" | "fazendas" | "culturas" | "dispositivos";
 export interface Usuario {
@@ -125,6 +127,7 @@ function Button({
 }
 
 export default function Conta() {
+  useTituloPagina("Minha conta");
   const idUsuario = Number(localStorage.getItem("usuarioId"));
   const [aba, setAba] = useState<Tab>(() =>
     new URLSearchParams(window.location.search).get("aba") === "dispositivos" ? "dispositivos" : "perfil",
@@ -306,12 +309,12 @@ export default function Conta() {
 
   if (loading)
     return (
-      <main className="min-h-screen bg-[#F4F0E6] p-10 text-[#687263]">
+      <main className="painel-neon min-h-screen p-10">
         Carregando dados da conta...
       </main>
     );
   return (
-    <div className="min-h-screen bg-[#F4F0E6] lg:grid lg:grid-cols-[240px_minmax(0,1fr)]">
+    <div className="painel-neon min-h-screen lg:grid lg:grid-cols-[240px_minmax(0,1fr)]">
       <Sidebar />
       <main className="account-page min-w-0 px-4 py-7 text-[#243126] sm:px-6 lg:px-10">
       <div className="mx-auto max-w-5xl">

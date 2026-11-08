@@ -54,8 +54,19 @@ Cargas em 127/220 V exigem instalação por profissional habilitado (contator, d
    AGROVIA_API=http://localhost:5000 AGROVIA_DEVICE_KEY=agv_... node tools/simulador-esp32.js --intervalo=10
    ```
    Em **Sensores → Irrigação**, envie "Irrigar por 1 min": o simulador mostra a válvula abrindo e o painel muda o status para *Executado*.
-4. Firmware: copie `esp32-agrovia/config.example.h` para `config.h`, preencha Wi-Fi, `API_ORIGEM`, `DEVICE_KEY` e o certificado raiz. Instale **ArduinoJson 7** e o núcleo **ESP32** na Arduino IDE, selecione *ESP32 Dev Module* e grave.
-5. **Calibre o sensor:** anote o valor bruto no ar/solo seco (`LEITURA_SECO`) e com o sensor em água ou solo saturado (`LEITURA_MOLHADO`). Para leituras em umidade volumétrica real, faça a calibração gravimétrica com o solo da área.
+4. Firmware: copie `esp32-agrovia/config.example.h` para `config.h` e preencha **só o Wi-Fi e a `DEVICE_KEY`**: `API_ORIGEM` já aponta para o Render e o `ROOT_CA` já traz os certificados raiz conferidos (GTS Root R4/R1, GlobalSign Root CA e ISRG Root X1). Instale **ArduinoJson 7** e o núcleo **ESP32** na Arduino IDE, selecione *ESP32 Dev Module* e grave.
+5. Abra o **Monitor Serial a 115200**. No boot aparecem o **MAC** (é ele que se cadastra no painel) e a API; depois, a cada minuto, `[SENSOR] Umidade x % (valor bruto y)` e `[API] 1 leitura(s) enviada(s) com sucesso`. No painel o dispositivo passa a **Conectado** e o gráfico do Painel mostra as leituras.
+6. **Calibre o sensor:** use o *valor bruto* do Monitor Serial com o sensor no ar/solo seco (`LEITURA_SECO`) e em água ou solo saturado (`LEITURA_MOLHADO`). Para leituras em umidade volumétrica real, faça a calibração gravimétrica com o solo da área.
+
+### Se algo der errado no Monitor Serial
+
+| Mensagem | O que fazer |
+| --- | --- |
+| `[WIFI] Falha ao conectar` | Confira `WIFI_SSID`/`WIFI_PASS`; o ESP32 só usa Wi-Fi **2,4 GHz**. |
+| `[API] Envio falhou (-1)` ou negativo | Sem resposta: confira `API_ORIGEM` e o `ROOT_CA`. O Render "dorme" sem uso e leva até ~1 min para acordar; a leitura fica guardada e vai no próximo envio. |
+| `[API] Envio falhou (401)` | Chave recusada: copie de novo a `DEVICE_KEY` (sem espaços) ou gere outra no painel. Gerar outra invalida a anterior. |
+| `[API] Envio falhou (429)` | Envios com menos de 5 s de intervalo; mantenha `INTERVALO_LEITURA_S` em 60. |
+| Umidade sempre 0 % ou 100 % | Calibração: ajuste `LEITURA_SECO`/`LEITURA_MOLHADO` com o valor bruto exibido. |
 
 ## Contrato da API do aparelho
 
@@ -70,7 +81,6 @@ Erros: `401` chave inválida, `400` dados inválidos (umidade fora de 0–100, h
 ## O que ainda falta para operação real
 
 - **Testar o firmware no hardware.** Ele foi escrito para o núcleo ESP32 2.x/3.x e ArduinoJson 7, mas não pôde ser compilado nem gravado neste ambiente.
-- **Certificado raiz do HTTPS:** preencher `ROOT_CA` com a autoridade que assina o domínio da API (ver no navegador, cadeado → certificado).
 - **Calibração do sensor por área:** os limites seco/molhado mudam com o solo e com o modelo do sensor.
 - **Irrigação automática por limiar:** hoje a irrigação é manual pelo painel. A regra automática (irrigar quando a umidade cair abaixo do limite da cultura, respeitando RAW = p × TAW) é o próximo passo, usando os limiares de CULTURAS e os parâmetros do capítulo técnico dos estudos.
 - **Hidrômetro ou sensor de vazão:** para confirmar que a água realmente passou, não apenas que o relé foi acionado.

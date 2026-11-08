@@ -2,11 +2,11 @@ import { RefObject, useEffect } from "react";
 
 export interface LandingMotionRefs {
   nav: RefObject<HTMLElement>;
+  heroTrack: RefObject<HTMLDivElement>;
   hero: RefObject<HTMLElement>;
   heroBg: RefObject<HTMLDivElement>;
   heroGlow: RefObject<HTMLDivElement>;
   heroDrops: RefObject<SVGSVGElement>;
-  sprinkler: RefObject<SVGSVGElement>;
   rainNear: RefObject<SVGSVGElement>;
   heroContent: RefObject<HTMLDivElement>;
   mid: RefObject<HTMLDivElement>;
@@ -18,6 +18,8 @@ const clamp = (value: number, min: number, max: number) => Math.min(max, Math.ma
 // Fração percorrida por quadro em direção ao alvo: dá a sensação de inércia sem atrasar demais.
 const SUAVIZACAO = 0.14;
 const PONTEIRO_SUAVIZACAO = 0.08;
+// Parte inicial da cena em que o texto do hero se dissolve e o campo verde toma a tela.
+const FIM_INTRO = 0.22;
 
 /**
  * Parallax e animações de entrada da landing.
@@ -37,7 +39,8 @@ export function useLandingMotion(refs: LandingMotionRefs) {
     const cropsVisiveis = new Set<HTMLElement>();
     let frame = 0;
     let viewportHeight = window.innerHeight;
-    let heroHeight = refs.hero.current?.offsetHeight ?? viewportHeight;
+    // Distância rolada enquanto o hero fica fixo dentro do trilho (o trilho é mais alto que a tela).
+    let faixaHero = viewportHeight;
     let intensity = 1;
     // Valores-alvo (lidos do navegador) e valores suavizados (aplicados na tela).
     let alvoScroll = window.scrollY;
@@ -55,18 +58,25 @@ export function useLandingMotion(refs: LandingMotionRefs) {
     };
 
     const resetLayers = () => {
-      [refs.heroBg, refs.heroGlow, refs.heroDrops, refs.sprinkler, refs.rainNear, refs.heroContent, refs.midBg].forEach((ref) => {
+      [refs.heroBg, refs.heroGlow, refs.heroDrops, refs.rainNear, refs.heroContent, refs.midBg].forEach((ref) => {
         const element = ref.current as HTMLElement | null;
         if (element) element.style.transform = "";
       });
       cropImgs.forEach((img) => { img.style.transform = ""; });
       if (midContent) midContent.style.transform = "";
-      if (refs.heroContent.current) refs.heroContent.current.style.opacity = "";
+      if (refs.heroContent.current) {
+        refs.heroContent.current.style.opacity = "";
+        refs.heroContent.current.style.visibility = "";
+      }
+      refs.hero.current?.style.removeProperty("--cena");
+      refs.hero.current?.classList.remove("hero--cena");
     };
 
     const render = () => {
       frame = 0;
       refs.nav.current?.classList.toggle("nav--scrolled", alvoScroll > 24);
+      // O botão de voltar ao topo só aparece depois que a cena do irrigador termina.
+      refs.root.current?.classList.toggle("landing--topo", alvoScroll > faixaHero + viewportHeight * 0.5);
       if (motionQuery.matches) return;
 
       scroll += (alvoScroll - scroll) * SUAVIZACAO;
@@ -74,23 +84,27 @@ export function useLandingMotion(refs: LandingMotionRefs) {
       ponteiro.y += (alvoPonteiro.y - ponteiro.y) * PONTEIRO_SUAVIZACAO;
       if (Math.abs(alvoScroll - scroll) < 0.1) scroll = alvoScroll;
 
-      if (visible.hero && scroll <= heroHeight) {
-        const s = scroll * intensity;
+      const hero = refs.hero.current;
+      if (visible.hero && hero) {
+        // Progresso da cena: 0 no topo da página, 1 quando o trilho termina e o hero volta a rolar.
+        const cena = clamp(scroll / faixaHero, 0, 1);
+        const intro = clamp(cena / FIM_INTRO, 0, 1);
         const px = ponteiro.x;
         const py = ponteiro.y;
-        // Camadas mais "distantes" andam menos com o ponteiro e mais com a rolagem.
-        // .hero-bg tem 20% de sobra acima e 3% nas laterais: 0,18 × altura e ±14 px cabem nela.
-        setTransform(refs.heroBg.current, px * -14, s * 0.18 + py * -10, 1.03);
-        setTransform(refs.heroGlow.current, px * 26, s * 0.26 + py * 18);
-        setTransform(refs.heroDrops.current, px * 40, s * 0.32 + py * 26);
-        // Primeiro plano: irrigador e chuva próxima andam mais, reforçando a profundidade.
-        setTransform(refs.sprinkler.current, px * 56, s * 0.42 + py * 30);
-        setTransform(refs.rainNear.current, px * 72, s * 0.5 + py * 40);
-        setTransform(refs.heroContent.current, px * 8, s * 0.1 + py * 6);
+        // O CSS deriva da variável o campo verde, o irrigador, a linha d'água e os cartões.
+        hero.style.setProperty("--cena", cena.toFixed(4));
+        hero.classList.toggle("hero--cena", cena > 0.02);
+        // Camadas mais "distantes" andam menos com o ponteiro; a foto se aproxima enquanto se dissolve.
+        // .hero-bg tem 20% de sobra acima e 3% nas laterais: o zoom e ±14 px cabem nela.
+        setTransform(refs.heroBg.current, px * -14, py * -10, 1.03 + intro * 0.12 * intensity);
+        setTransform(refs.heroGlow.current, px * 26, py * 18);
+        setTransform(refs.heroDrops.current, px * 40, py * 26);
+        setTransform(refs.rainNear.current, px * 72, py * 40);
+        // O texto sobe e some na introdução; escondido, deixa de receber cliques e foco.
+        setTransform(refs.heroContent.current, px * 8, py * 6 - intro * 90 * intensity);
         if (refs.heroContent.current) {
-          // O texto só começa a esmaecer depois de 30% da rolagem do hero.
-          const fade = Math.max(0, scroll - heroHeight * 0.3) / (heroHeight * 0.7);
-          refs.heroContent.current.style.opacity = clamp(1 - fade, 0.3, 1).toFixed(3);
+          refs.heroContent.current.style.opacity = (1 - intro).toFixed(3);
+          refs.heroContent.current.style.visibility = intro >= 1 ? "hidden" : "";
         }
       }
 
@@ -129,7 +143,7 @@ export function useLandingMotion(refs: LandingMotionRefs) {
     };
 
     const handlePointer = (event: PointerEvent) => {
-      if (!visible.hero || alvoScroll > heroHeight) return;
+      if (!visible.hero || alvoScroll > faixaHero) return;
       // Posição normalizada em -1…1 a partir do centro da tela.
       alvoPonteiro.x = clamp((event.clientX / window.innerWidth) * 2 - 1, -1, 1);
       alvoPonteiro.y = clamp((event.clientY / viewportHeight) * 2 - 1, -1, 1);
@@ -144,22 +158,18 @@ export function useLandingMotion(refs: LandingMotionRefs) {
 
     const measure = () => {
       viewportHeight = window.innerHeight;
-      heroHeight = refs.hero.current?.offsetHeight ?? viewportHeight;
+      const trilho = refs.heroTrack.current;
+      const hero = refs.hero.current;
+      faixaHero = Math.max(1, (trilho?.offsetHeight ?? 0) - (hero?.offsetHeight ?? viewportHeight));
       // Em telas pequenas o movimento fica mais discreto.
       intensity = window.innerWidth < 768 ? 0.6 : 1;
       alvoScroll = window.scrollY;
       requestRender();
     };
 
-    // Chuva e irrigador só animam com o hero na tela (CSS e SMIL pausados fora dela).
+    // Chuva e irrigador só animam com o hero na tela (animações CSS pausadas fora dela).
     const atualizarAnimacoesHero = () => {
-      const pausar = !visible.hero || motionQuery.matches;
-      refs.hero.current?.classList.toggle("hero--paused", pausar);
-      const irrigador = refs.sprinkler.current;
-      if (irrigador) {
-        if (pausar) irrigador.pauseAnimations?.();
-        else irrigador.unpauseAnimations?.();
-      }
+      refs.hero.current?.classList.toggle("hero--paused", !visible.hero || motionQuery.matches);
     };
 
     const handleMotionPreference = () => {
@@ -192,6 +202,34 @@ export function useLandingMotion(refs: LandingMotionRefs) {
       cropImgs.forEach((img) => img.parentElement && sectionObserver?.observe(img.parentElement));
     } else {
       visible.mid = true;
+    }
+
+    // Menu: destaca o link da seção que ocupa o meio da tela.
+    const linksMenu = Array.from(refs.nav.current?.querySelectorAll<HTMLAnchorElement>(".nav-links a") ?? []);
+    let menuObserver: IntersectionObserver | undefined;
+    if ("IntersectionObserver" in window && linksMenu.length) {
+      menuObserver = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          const link = linksMenu.find((a) => a.hash === `#${entry.target.id}`);
+          if (!link) return;
+          link.classList.toggle("is-active", entry.isIntersecting);
+          if (!entry.isIntersecting) {
+            link.removeAttribute("aria-current");
+            return;
+          }
+          link.setAttribute("aria-current", "location");
+          // No celular os links rolam na lateral: centraliza o ativo para ele não ficar escondido.
+          const lista = link.closest<HTMLElement>(".nav-links");
+          if (lista && lista.scrollWidth > lista.clientWidth) {
+            const item = link.parentElement as HTMLElement;
+            lista.scrollTo({ left: item.offsetLeft - (lista.clientWidth - item.offsetWidth) / 2, behavior: "smooth" });
+          }
+        });
+      }, { rootMargin: "-45% 0px -50% 0px" });
+      linksMenu.forEach((a) => {
+        const secao = a.hash ? document.getElementById(a.hash.slice(1)) : null;
+        if (secao) menuObserver?.observe(secao);
+      });
     }
 
     // Revelação suave dos blocos ao entrarem na tela (uma única vez).
@@ -230,6 +268,7 @@ export function useLandingMotion(refs: LandingMotionRefs) {
       heroEl?.removeEventListener("pointerleave", handlePointerLeave);
       motionQuery.removeEventListener?.("change", handleMotionPreference);
       sectionObserver?.disconnect();
+      menuObserver?.disconnect();
       revealObserver?.disconnect();
     };
     // As refs são estáveis durante a vida do componente.
