@@ -1,14 +1,33 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { BookOpen, Lock, LucideIcon, Mail, Phone, Radio, Sprout, User } from 'lucide-react';
 import { apiFetch } from '../services/http';
 import { saveSession } from '../services/session';
-import '../styles/login.css';
+import { AuthCabecalho, AuthCampo, AuthErro, AuthLayout, RegrasSenha, SessaoAberta } from './AuthLayout';
+import { useTituloPagina } from '../hooks/useTituloPagina';
+
+const destaques = [
+  { icone: Sprout, titulo: 'Cadastro gratuito', detalhe: 'Fazendas, talhões e culturas' },
+  { icone: Radio, titulo: 'Dispositivos ESP32', detalhe: 'Vínculo pelo código MAC' },
+  { icone: BookOpen, titulo: 'Estudos agrícolas', detalhe: 'Referências técnicas por cultura' },
+];
 
 const SENHA_MINIMA = 8;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type Campos = { nome: string; email: string; telefone: string; senha: string; confirmacao: string };
 type Erros = Partial<Record<keyof Campos, string>>;
+
+// Formata enquanto digita: (11) 98765-4321 para celular, (11) 3456-7890 para fixo.
+// Números que não seguem o padrão brasileiro (ex.: começando com +) ficam como foram digitados.
+function formatarTelefone(valor: string) {
+  if (/^\s*\+/.test(valor)) return valor;
+  const d = valor.replace(/\D/g, '').slice(0, 11);
+  if (d.length <= 2) return d.length ? `(${d}` : '';
+  if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
+  if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+}
 
 // Mesmas regras do servidor, para o usuário ver o problema antes de enviar.
 function validar(campos: Campos): Erros {
@@ -26,6 +45,7 @@ function validar(campos: Campos): Erros {
 }
 
 const Cadastro: React.FC = () => {
+  useTituloPagina("Criar conta");
   const navigate = useNavigate();
   const [campos, setCampos] = useState<Campos>({ nome: '', email: '', telefone: '', senha: '', confirmacao: '' });
   const [erros, setErros] = useState<Erros>({});
@@ -33,7 +53,8 @@ const Cadastro: React.FC = () => {
   const [carregando, setCarregando] = useState(false);
 
   const atualizar = (campo: keyof Campos) => (event: React.ChangeEvent<HTMLInputElement>) => {
-    setCampos((atual) => ({ ...atual, [campo]: event.target.value }));
+    const valor = campo === 'telefone' ? formatarTelefone(event.target.value) : event.target.value;
+    setCampos((atual) => ({ ...atual, [campo]: valor }));
     if (erros[campo]) setErros((atual) => ({ ...atual, [campo]: undefined }));
   };
 
@@ -78,99 +99,66 @@ const Cadastro: React.FC = () => {
   const campo = (
     id: keyof Campos,
     label: string,
+    icone: LucideIcon,
     props: React.InputHTMLAttributes<HTMLInputElement>,
   ) => (
-    <div className="form-group">
-      <label htmlFor={`cadastro-${id}`}>{label}</label>
-      <input
-        id={`cadastro-${id}`}
-        value={campos[id]}
-        onChange={atualizar(id)}
-        aria-invalid={Boolean(erros[id])}
-        aria-describedby={erros[id] ? `cadastro-${id}-erro` : undefined}
-        className={erros[id] ? 'input-invalid' : undefined}
-        {...props}
-      />
-      {erros[id] && <small id={`cadastro-${id}-erro`} className="field-error">{erros[id]}</small>}
-    </div>
+    <AuthCampo
+      id={`cadastro-${id}`}
+      label={label}
+      icone={icone}
+      erro={erros[id]}
+      value={campos[id]}
+      onChange={atualizar(id)}
+      className={erros[id] ? 'input-invalid' : undefined}
+      {...props}
+    />
   );
 
   return (
-    <div
-      className="login-page"
-      style={{
-        backgroundImage: `linear-gradient(to bottom, rgba(14, 26, 15, 0.6) 0%, var(--dark) 100%), url('${process.env.PUBLIC_URL}/img/fundo-login.jpg')`
-      }}
+    <AuthLayout
+      vitrineTitulo="Crie sua conta e organize"
+      vitrineDestaque="a sua propriedade."
+      vitrineTexto="Depois do cadastro você já entra no painel para registrar fazendas, vincular dispositivos e consultar os estudos agrícolas."
+      destaques={destaques}
+      compacto
     >
-      <div className="login-overlay" />
+      <AuthCabecalho titulo="Criar conta" subtitulo="Preencha seus dados para começar" />
 
-      <div className="login-shell">
-        <aside className="login-showcase">
-          <div className="login-showcase-top">
-            <span className="login-pill">Agrovia IoT</span>
-          </div>
-
-          <h2>Crie sua conta e organize a sua propriedade.</h2>
-
-          <p>
-            Depois do cadastro você já entra no painel para registrar fazendas, vincular dispositivos e consultar os estudos agrícolas.
-          </p>
-
-          <ul className="login-feature-list">
-            <li>Cadastro gratuito de campos e culturas</li>
-            <li>Vínculo de dispositivos ESP32 pelo código MAC</li>
-            <li>Estudos agrícolas com referências técnicas</li>
-          </ul>
-        </aside>
-
-        <div className="login-card">
-          <header className="login-header">
-            <button type="button" className="login-logo" onClick={() => navigate('/')} aria-label="Voltar para a página inicial">
-              <img src={`${process.env.PUBLIC_URL}/img/logo-agrovia.png`} alt="" />
-              <span className="login-logo-word">AGRO<span>VIA</span></span>
-            </button>
-            <h1 className="login-title">Criar conta</h1>
-            <p className="login-subtitle">Preencha seus dados para começar</p>
-          </header>
-
-          <form onSubmit={handleSubmit} className="login-form signup-form" noValidate>
-            {campo('nome', 'Nome completo', { type: 'text', autoComplete: 'name', maxLength: 100, required: true, placeholder: 'Seu nome' })}
-            {campo('email', 'E-mail', { type: 'email', autoComplete: 'email', maxLength: 100, required: true, placeholder: 'seu@email.com' })}
-            {campo('telefone', 'Telefone (opcional)', { type: 'tel', autoComplete: 'tel', maxLength: 20, placeholder: '(00) 00000-0000' })}
-            <div className="signup-row">
-              {campo('senha', 'Senha', { type: 'password', autoComplete: 'new-password', required: true, placeholder: '••••••••' })}
-              {campo('confirmacao', 'Confirmar senha', { type: 'password', autoComplete: 'new-password', required: true, placeholder: '••••••••' })}
-            </div>
-
-            {erro && (
-              <div className="login-error" role="alert">
-                <span aria-hidden="true">⚠️</span>
-                <span>{erro}</span>
-              </div>
-            )}
-
-            <button type="submit" disabled={carregando} className="login-btn">
-              {carregando ? (
-                <>
-                  <div className="spinner" />
-                  <span>Criando conta...</span>
-                </>
-              ) : (
-                'Criar conta'
-              )}
-            </button>
-          </form>
-
-          <p className="login-switch">
-            Já tem uma conta? <Link to="/login">Entrar</Link>
-          </p>
-
-          <footer className="login-footer">
-            © 2026 AgroVia — Tecnologia para o Campo
-          </footer>
+      <form onSubmit={handleSubmit} className="login-form signup-form" noValidate>
+        <SessaoAberta />
+        <div className="signup-row">
+          {campo('nome', 'Nome completo', User, { type: 'text', autoComplete: 'name', maxLength: 100, required: true, placeholder: 'Seu nome' })}
+          {campo('telefone', 'Telefone (opcional)', Phone, { type: 'tel', autoComplete: 'tel', maxLength: 20, placeholder: '(00) 00000-0000' })}
         </div>
-      </div>
-    </div>
+        {campo('email', 'E-mail', Mail, { type: 'email', autoComplete: 'email', maxLength: 100, required: true, placeholder: 'seu@email.com' })}
+        <div className="signup-row">
+          {campo('senha', 'Senha', Lock, { type: 'password', autoComplete: 'new-password', required: true, placeholder: '••••••••' })}
+          {campo('confirmacao', 'Confirmar senha', Lock, { type: 'password', autoComplete: 'new-password', required: true, placeholder: '••••••••' })}
+        </div>
+        <RegrasSenha senha={campos.senha} minimo={SENHA_MINIMA} confirmacao={campos.confirmacao} />
+
+        {erro && <AuthErro>{erro}</AuthErro>}
+
+        <button type="submit" disabled={carregando} className="login-btn">
+          {carregando ? (
+            <>
+              <div className="spinner" />
+              <span>Criando conta...</span>
+            </>
+          ) : (
+            <>Criar conta <span aria-hidden="true">→</span></>
+          )}
+        </button>
+      </form>
+
+      <p className="login-switch">
+        Já tem uma conta? <Link to="/login">Entrar</Link>
+      </p>
+
+      <footer className="login-footer">
+        © 2026 AgroVia — Tecnologia para o Campo
+      </footer>
+    </AuthLayout>
   );
 };
 
