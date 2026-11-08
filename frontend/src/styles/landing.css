@@ -141,9 +141,15 @@ body,
   color: var(--green-neon);
 }
 
-.nav-links a:hover::after {
+.nav-links a:hover::after,
+.nav-links a.is-active::after {
   transform: scaleX(1);
   transform-origin: left;
+}
+
+/* Seção atual (o script marca o link com .is-active). */
+.nav-links a.is-active {
+  color: var(--green-neon);
 }
 
 .nav-actions {
@@ -197,8 +203,18 @@ body,
 }
 
 /* ──── HERO ──── */
-.hero {
+/* Trilho alto: enquanto ele passa, o hero fica fixo (sticky) e a rolagem conduz a cena do irrigador. */
+.hero-trilho {
   position: relative;
+  height: 360vh;
+  height: 360svh;
+}
+
+.hero {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100svh;
   min-height: 100vh;
   min-height: 100svh;
   display: flex;
@@ -213,7 +229,6 @@ body,
 .hero-glow,
 .hero-drops,
 .hero-rain-near,
-.hero-sprinkler,
 .parallax-mid-bg {
   position: absolute;
   pointer-events: none;
@@ -274,83 +289,369 @@ body,
   stroke-width: 2.4;
 }
 
-/* ── Irrigador por aspersão (primeiro plano) ── */
-/* Ancorado no fim da primeira tela (não do hero, que pode ser mais alto que a janela).
-   A altura do SVG é 3/4 da largura (viewBox 400 × 300). */
-.hero-sprinkler {
-  --sprinkler-w: clamp(260px, 34vw, 520px);
-  top: calc(min(100%, 100svh) - var(--sprinkler-w) * 0.75 + 6px);
-  right: clamp(-40px, 2vw, 40px);
-  width: var(--sprinkler-w);
-  height: auto;
+/* ── Cena do irrigador, conduzida pela rolagem ── */
+/* --cena (0 a 1) vem do script. Cada camada converte a faixa que lhe cabe em 0…1 com clamp():
+   0,08–0,25 campo · 0,12–0,32 irrigador · 0,30–0,42 órbita · 0,36–0,48 linha d'água ·
+   0,48–0,71 informações · 0,74–0,82 legenda. */
+.cena {
+  --p: var(--cena, 0);
+  /* Raios da órbita onde ficam as informações. */
+  --rx: clamp(230px, 23vw, 360px);
+  --ry: clamp(150px, 22vh, 220px);
+  --azul: #00b4ff;
+  --azul-claro: #38d6ff;
+  --branco: #f8fafc;
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.cena-campo {
+  --k: clamp(0, (var(--p) - 0.08) / 0.17, 1);
+  position: absolute;
+  inset: 0;
+  opacity: var(--k);
+  background:
+    radial-gradient(circle at 50% 50%, rgba(0, 180, 255, 0.38), transparent 30%),
+    radial-gradient(ellipse at 50% 50%, rgba(127, 255, 106, 0.34), transparent 62%),
+    linear-gradient(rgba(127, 255, 106, 0.2) 1px, transparent 1px) 50% 50% / 44px 44px,
+    linear-gradient(90deg, rgba(127, 255, 106, 0.2) 1px, transparent 1px) 50% 50% / 44px 44px,
+    linear-gradient(160deg, #0b2a12 0%, #071d10 50%, #04161c 100%);
+  /* Leve aproximação enquanto surge, como uma câmera descendo sobre o talhão. */
+  transform: scale(calc(1.08 - var(--k) * 0.08));
+}
+
+/* Vinheta própria da cena: escurece as bordas da malha. */
+.cena-campo::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 50%, transparent 45%, rgba(2, 8, 5, 0.75) 100%);
+}
+
+.cena-centro {
+  --k: clamp(0, (var(--p) - 0.12) / 0.2, 1);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: clamp(240px, 26vw, 380px);
+  aspect-ratio: 1;
+  opacity: var(--k);
+  transform: translate(-50%, -50%) scale(calc(0.55 + var(--k) * 0.45));
+}
+
+.cena-halo {
+  position: absolute;
+  inset: -35%;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, rgba(255, 255, 255, 0.5), transparent 20%),
+    radial-gradient(circle, rgba(0, 180, 255, 0.55), rgba(127, 255, 106, 0.25) 45%, transparent 70%);
+  animation: irrPulso 3.2s ease-in-out infinite;
+}
+
+.cena-irrigador {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
   overflow: visible;
-  filter: drop-shadow(0 10px 22px rgba(0, 0, 0, 0.35));
+  filter: drop-shadow(0 0 14px rgba(0, 180, 255, 0.75)) drop-shadow(0 0 28px rgba(127, 255, 106, 0.35));
 }
 
-.sprinkler-head {
+/* Órbita: elipse onde as informações se apoiam; gira levemente até assentar. */
+.cena-orbita {
+  --k: clamp(0, (var(--p) - 0.3) / 0.12, 1);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: calc(var(--rx) * 2);
+  height: calc(var(--ry) * 2);
+  margin: calc(var(--ry) * -1) 0 0 calc(var(--rx) * -1);
+  opacity: var(--k);
+  transform: scale(calc(0.8 + var(--k) * 0.2)) rotate(calc((1 - var(--k)) * -12deg));
+}
+
+.cena-orbita-anel {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1.5px dashed rgba(127, 255, 106, 0.75);
+  filter: drop-shadow(0 0 6px rgba(127, 255, 106, 0.6));
+}
+
+.cena-orbita-anel--interno {
+  inset: 16px;
+  border: 1.5px solid rgba(56, 214, 255, 0.6);
+  filter: none;
+  box-shadow: inset 0 0 40px rgba(0, 180, 255, 0.22), 0 0 24px rgba(0, 180, 255, 0.35);
+}
+
+/* Linha d'água: nasce no irrigador e corre até a órbita dos dois lados, com um brilho que percorre o fluxo. */
+.cena-linha {
+  --k: clamp(0, (var(--p) - 0.36) / 0.12, 1);
+  position: absolute;
+  top: 50%;
+  left: calc(50% - var(--rx));
+  right: calc(50% - var(--rx));
+  height: 4px;
+  margin-top: -2px;
+  border-radius: 4px;
+  overflow: hidden;
+  opacity: clamp(0, var(--k) * 3, 1);
+  background: linear-gradient(90deg, rgba(0, 180, 255, 0.7), var(--azul-claro) 20%, #ffffff 50%, var(--azul-claro) 80%, rgba(0, 180, 255, 0.7));
+  box-shadow: 0 0 18px 4px rgba(0, 180, 255, 0.85), 0 0 70px 16px rgba(56, 214, 255, 0.35);
+  transform: scaleX(var(--k));
+}
+
+.cena-linha::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 16%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.95), transparent);
+  animation: linhaBrilho 2.2s linear infinite;
+}
+
+/* Informações nas laterais, ancoradas em pontos da órbita (cos/sen de 30° = 0,866/0,5).
+   `translate` ancora o cartão no ponto; `transform` cuida da entrada, saindo de dentro da órbita. */
+.cena-info {
+  --k: clamp(0, (var(--p) - var(--t)) / 0.07, 1);
+  --tom: var(--green-neon);
+  --gap: 26px;
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: max-content;
+  max-width: 280px;
+  padding: 0.75rem 1rem 0.75rem 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--tom) 55%, transparent);
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(10, 32, 18, 0.82), rgba(5, 18, 14, 0.62));
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 20px 40px -20px rgba(0, 0, 0, 0.7), 0 0 26px -8px var(--tom), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  opacity: var(--k);
+}
+
+.cena-info--azul { --tom: var(--azul-claro); }
+.cena-info--branco { --tom: var(--branco); }
+
+.cena-info--esq-cima,
+.cena-info--esq-meio,
+.cena-info--esq-baixo {
+  translate: -100% -50%;
+  transform: translateX(calc((1 - var(--k)) * 28px)) scale(calc(0.94 + var(--k) * 0.06));
+}
+
+.cena-info--dir-cima,
+.cena-info--dir-meio,
+.cena-info--dir-baixo {
+  translate: 0 -50%;
+  transform: translateX(calc((1 - var(--k)) * -28px)) scale(calc(0.94 + var(--k) * 0.06));
+}
+
+.cena-info--esq-cima { top: calc(50% - var(--ry) * 0.5); left: calc(50% - var(--rx) * 0.866 - var(--gap)); }
+.cena-info--esq-meio { top: 50%; left: calc(50% - var(--rx) - var(--gap)); }
+.cena-info--esq-baixo { top: calc(50% + var(--ry) * 0.5); left: calc(50% - var(--rx) * 0.866 - var(--gap)); }
+.cena-info--dir-cima { top: calc(50% - var(--ry) * 0.5); left: calc(50% + var(--rx) * 0.866 + var(--gap)); }
+.cena-info--dir-meio { top: 50%; left: calc(50% + var(--rx) + var(--gap)); }
+.cena-info--dir-baixo { top: calc(50% + var(--ry) * 0.5); left: calc(50% + var(--rx) * 0.866 + var(--gap)); }
+
+/* Ponto aceso exatamente sobre a órbita, do lado do cartão voltado para o irrigador. */
+.cena-info-ponto {
+  position: absolute;
+  top: 50%;
+  width: 11px;
+  height: 11px;
+  margin-top: -5.5px;
+  border-radius: 50%;
+  background: var(--tom);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.18), 0 0 8px var(--tom), 0 0 22px var(--tom);
+}
+
+.cena-info-ponto::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 1px solid var(--tom);
+  animation: pontoOnda 2.4s ease-out infinite;
+}
+
+.cena-info--esq-cima .cena-info-ponto,
+.cena-info--esq-meio .cena-info-ponto,
+.cena-info--esq-baixo .cena-info-ponto {
+  right: calc(var(--gap) * -1 - 5.5px);
+}
+
+.cena-info--dir-cima .cena-info-ponto,
+.cena-info--dir-meio .cena-info-ponto,
+.cena-info--dir-baixo .cena-info-ponto {
+  left: calc(var(--gap) * -1 - 5.5px);
+}
+
+.cena-info-icone {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  color: var(--tom);
+  background: color-mix(in srgb, var(--tom) 16%, rgba(4, 18, 10, 0.8));
+  border: 1px solid color-mix(in srgb, var(--tom) 65%, transparent);
+  box-shadow: 0 0 14px -2px color-mix(in srgb, var(--tom) 60%, transparent);
+}
+
+.cena-info-texto {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.cena-info-texto strong {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.cena-info-texto small {
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: rgba(232, 245, 236, 0.82);
+}
+
+/* Legenda final, abaixo da órbita. */
+.cena-legenda {
+  --k: clamp(0, (var(--p) - 0.74) / 0.08, 1);
+  position: absolute;
+  left: 50%;
+  bottom: 6%;
+  width: min(520px, calc(100% - 2rem));
+  translate: -50% 0;
+  text-align: center;
+  opacity: var(--k);
+  transform: translateY(calc((1 - var(--k)) * 18px));
+}
+
+.cena-legenda span {
+  display: inline-block;
+  margin-bottom: 0.4rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--green-neon);
+  text-shadow: 0 0 12px rgba(127, 255, 106, 0.6);
+}
+
+.cena-legenda p {
+  font-size: 1rem;
+  line-height: 1.5;
+  color: #ffffff;
+}
+
+/* Desenho do irrigador (SVG). Elementos que giram ou escalam usam o próprio centro. */
+.irr-alcance,
+.irr-onda,
+.irr-gota-voo,
+.irr-spray {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.irr-alcance {
+  fill: none;
+  stroke: rgba(127, 255, 106, 0.75);
+  stroke-width: 1.8;
+  stroke-dasharray: 3 9;
+  animation: irrGiro 40s linear infinite;
+}
+
+.irr-onda {
+  fill: none;
+  stroke: #38d6ff;
+  stroke-width: 2.2;
+  vector-effect: non-scaling-stroke;
+  animation: irrOnda 4.5s cubic-bezier(0.2, 0.6, 0.35, 1) infinite;
+}
+
+/* O jato é desenhado do centro para a direita; o grupo gira em torno do bocal central (200,200). */
+.irr-cabeca {
   transform-box: view-box;
-  transform-origin: 300px 206px;
-  animation: sprinklerSweep 7s ease-in-out infinite alternate;
+  transform-origin: 200px 200px;
+  animation: irrGiro 4s linear infinite;
 }
 
-.sprinkler-jet {
-  fill: none;
-  stroke-width: 3;
-  stroke-linecap: round;
-  stroke-dasharray: 2 11;
-  animation: jetFlow 0.55s linear infinite;
+.irr-jato {
+  opacity: 0.95;
 }
 
-.sprinkler-jet--short {
-  stroke-width: 2;
-  stroke-dasharray: 1.5 9;
-  opacity: 0.8;
-  animation-duration: 0.45s;
+.irr-gota-voo {
+  fill: #e0f2fe;
+  animation: irrVoo 1.12s linear infinite;
 }
 
-.sprinkler-stream {
-  fill: none;
-  stroke-width: 1.6;
-  stroke-linecap: round;
-  opacity: 0.55;
+.irr-spray {
+  fill: #f0f9ff;
+  animation: irrCintila 0.6s ease-in-out infinite alternate;
 }
 
-.sprinkler-stream--short {
-  stroke-width: 1.1;
-  opacity: 0.4;
+.irr-nevoa {
+  animation: irrPulso 1.4s ease-in-out infinite;
 }
 
-.sprinkler-droplet {
-  fill: rgba(225, 255, 240, 0.9);
+.irr-braco {
+  fill: #163d20;
+  stroke: rgba(255, 255, 255, 0.5);
+  stroke-width: 1;
 }
 
-.sprinkler-splash {
-  fill: none;
-  stroke: rgba(200, 255, 228, 0.7);
+.irr-bocal {
+  fill: #0077c8;
+  stroke: #7fe3ff;
   stroke-width: 1.2;
 }
 
-.sprinkler-mist {
-  animation: mistPulse 2.7s ease-in-out infinite;
+.irr-marcas {
+  fill: none;
+  stroke: rgba(56, 214, 255, 0.85);
+  stroke-width: 1.5;
+  stroke-dasharray: 2 6;
 }
 
-.sprinkler-nozzle {
-  fill: #1d3322;
-  stroke: rgba(127, 255, 106, 0.55);
+.irr-base {
+  fill: #08200f;
+  stroke: var(--green-neon);
+  stroke-width: 2;
+}
+
+.irr-cupula {
+  stroke: #ffffff;
   stroke-width: 1;
 }
 
-.sprinkler-fitting {
-  fill: #16261a;
-  stroke: rgba(127, 255, 106, 0.3);
-  stroke-width: 1;
+.irr-gota {
+  fill: #0077c8;
 }
 
-/* Hero fora da tela: as animações em CSS param (as em SMIL são pausadas pelo script). */
+/* A seta de rolagem some assim que a cena começa. */
+.hero-scroll {
+  transition: opacity 0.4s ease;
+}
+
+.hero--cena .hero-scroll {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Hero fora da tela: chuva e irrigador param. */
 .hero--paused .rain-drop,
-.hero--paused .sprinkler-head,
-.hero--paused .sprinkler-jet,
-.hero--paused .sprinkler-mist {
+.hero--paused .cena *,
+.hero--paused .cena-irrigador * {
   animation-play-state: paused;
 }
 
@@ -516,7 +817,7 @@ body,
   box-shadow: var(--focus-ring);
 }
 
-.landing-container :is(.text-link, .footer-links a, .feature-card button, .crop-study-link, .nav-links a):focus-visible {
+.landing-container :is(.text-link, .footer-links a, .crop-study-link, .nav-links a, .faq-item summary):focus-visible {
   box-shadow: none;
   outline: 2px solid #a8ca8e;
   outline-offset: 4px;
@@ -565,6 +866,48 @@ section {
   margin: 0 auto;
 }
 
+/* ── Ondas de transição ── */
+/* Nas passagens entre fundo escuro e claro, a seção recebe no topo uma onda com a cor da seção
+   anterior e um fio neon. O padding extra reserva o espaço da onda. */
+.com-onda {
+  --onda-h: clamp(60px, 8vw, 120px);
+  position: relative;
+  /* Sobrepõe 1px da seção anterior: evita um fio de emenda em posições de rolagem fracionadas. */
+  margin-top: -1px;
+  padding-top: calc(clamp(4.5rem, 9vw, 8rem) + var(--onda-h) * 0.75);
+}
+
+.cta-section.com-onda {
+  padding-top: calc(2rem + var(--onda-h));
+}
+
+.onda {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: var(--onda-h);
+  pointer-events: none;
+  overflow: visible;
+}
+
+/* Espelhada na horizontal: alterna o ritmo entre uma onda e a seguinte. */
+.onda--invertida {
+  transform: scaleX(-1);
+}
+
+.onda path {
+  fill: var(--onda-cor);
+}
+
+.onda .onda-linha {
+  fill: none;
+  stroke: var(--green-neon);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 0 6px rgba(127, 255, 106, 0.8)) drop-shadow(0 0 14px rgba(0, 180, 255, 0.45));
+}
+
 /* ──── ABOUT ──── */
 .about {
   display: grid;
@@ -590,43 +933,83 @@ section {
   color: #555;
 }
 
+/* Cartão escuro no estilo da cena: as três etapas ligadas por um fio verde-azul com um pulso correndo. */
 .about-visual {
+  --tom: var(--green-neon);
+  position: relative;
   display: grid;
   width: 100%;
-  padding: 1rem 2rem;
-  border: 1px solid rgba(58, 125, 68, 0.16);
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.8);
-  box-shadow: 0 24px 50px -20px rgba(18, 24, 17, 0.16);
+  padding: 1.2rem 2rem;
+  border: 1px solid rgba(127, 255, 106, 0.3);
+  border-radius: 22px;
+  background:
+    radial-gradient(ellipse at 0% 0%, rgba(0, 180, 255, 0.16), transparent 55%),
+    radial-gradient(ellipse at 100% 100%, rgba(127, 255, 106, 0.14), transparent 55%),
+    linear-gradient(160deg, #0c2414, #06140c);
+  box-shadow: 0 30px 60px -24px rgba(6, 20, 12, 0.55), 0 0 40px -12px rgba(127, 255, 106, 0.35);
+}
+
+/* Fio que liga os ícones (centro dos ícones: 2rem de padding + 25px). */
+.about-visual::before,
+.about-visual::after {
+  content: "";
+  position: absolute;
+  left: calc(2rem + 24px);
+  top: 3.2rem;
+  bottom: 3.2rem;
+  width: 2px;
+  border-radius: 2px;
+}
+
+.about-visual::before {
+  background: linear-gradient(180deg, var(--green-neon), #38d6ff, var(--green-neon));
+  opacity: 0.55;
+}
+
+.about-visual::after {
+  height: 26px;
+  bottom: auto;
+  background: linear-gradient(180deg, transparent, #ffffff, transparent);
+  box-shadow: 0 0 10px #38d6ff;
+  animation: fioPulso 2.6s ease-in-out infinite;
 }
 
 .about-visual-line {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 1.1rem;
   padding: 1.2rem 0;
-  color: var(--dark);
+  color: var(--text);
 }
 
 .about-visual-line + .about-visual-line {
-  border-top: 1px solid #e3e9df;
+  border-top: 1px solid rgba(127, 255, 106, 0.1);
+}
+
+.about-visual-line:nth-child(2) {
+  --tom: #38d6ff;
 }
 
 .about-visual-line > span {
-  width: 46px;
-  height: 46px;
+  position: relative;
+  z-index: 1;
+  width: 50px;
+  height: 50px;
   display: grid;
   flex: 0 0 auto;
   place-items: center;
-  border-radius: 12px;
-  background: #e9f2e5;
-  color: var(--green);
-  transition: transform 0.3s var(--ease-out), background-color 0.3s ease;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--tom) 60%, transparent);
+  background: color-mix(in srgb, var(--tom) 14%, #07170d);
+  color: var(--tom);
+  box-shadow: 0 0 18px -4px color-mix(in srgb, var(--tom) 70%, transparent);
+  transition: transform 0.3s var(--ease-out), box-shadow 0.3s ease;
 }
 
 .about-visual-line:hover > span {
   transform: scale(1.08);
-  background: #dcecd5;
+  box-shadow: 0 0 26px -2px var(--tom);
 }
 
 .about-visual-line strong,
@@ -635,12 +1018,13 @@ section {
 }
 
 .about-visual-line strong {
-  font-size: 1rem;
+  font-size: 1.02rem;
+  color: #ffffff;
 }
 
 .about-visual-line small {
   margin-top: 0.2rem;
-  color: #657064;
+  color: rgba(214, 235, 220, 0.72);
   font-size: 0.84rem;
 }
 
@@ -660,13 +1044,11 @@ section {
 }
 
 .text-link span,
-.feature-card button span,
 .crop-study-link span {
   transition: transform 0.25s var(--ease-out);
 }
 
 .text-link:hover span,
-.feature-card button:hover span,
 .crop-study-link:hover span {
   transform: translateX(4px);
 }
@@ -827,51 +1209,79 @@ section {
   color: #5c6a5d;
 }
 
+/* Cartões claros com ícone; ao passar o mouse sobem e o ícone acende em verde-azul. */
 .benefit-list {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.8rem 2rem;
-  max-width: 1080px;
+  gap: 1.1rem;
+  max-width: 1120px;
   margin: 3rem auto 0;
   padding: 0;
   list-style: none;
 }
 
 .benefit-list li {
+  position: relative;
   display: flex;
-  align-items: flex-start;
-  gap: 0.85rem;
-  padding: 1.1rem 0;
-  border-bottom: 1px solid rgba(32, 51, 38, 0.12);
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.5rem;
+  overflow: hidden;
+  border: 1px solid rgba(32, 51, 38, 0.1);
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 18px 36px -26px rgba(20, 40, 26, 0.35);
   color: #34483a;
   font-size: 0.96rem;
   line-height: 1.5;
+}
+
+/* Faixa de cor no topo, revelada no hover. */
+.benefit-list li::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: linear-gradient(90deg, var(--green-neon), #00b4ff);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.45s var(--ease-out);
+}
+
+.benefit-list li.reveal.is-visible:hover {
+  transform: translateY(-5px);
+  border-color: rgba(57, 131, 77, 0.3);
+  box-shadow: 0 26px 44px -24px rgba(20, 60, 30, 0.45);
+  transition-delay: 0ms;
+}
+
+.benefit-list li:hover::before {
+  transform: scaleX(1);
 }
 
 .benefit-list li > span {
   display: grid;
   flex: 0 0 auto;
   place-items: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 8px;
-  background: rgba(57, 131, 77, 0.12);
-  color: #39834d;
-  font-size: 1.05rem;
-  font-weight: 700;
-  line-height: 1;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  width: 46px;
+  height: 46px;
+  border-radius: 13px;
+  background: linear-gradient(135deg, rgba(127, 255, 106, 0.22), rgba(0, 180, 255, 0.16));
+  color: #1f7a38;
+  transition: background 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .benefit-list li:hover > span {
-  background: #39834d;
-  color: #edf2e8;
+  background: linear-gradient(135deg, #3fd45a, #00a6e8);
+  color: #ffffff;
+  box-shadow: 0 10px 22px -8px rgba(0, 166, 232, 0.7);
 }
 
 .benefit-list strong {
   display: block;
-  margin-bottom: 0.2rem;
+  margin-bottom: 0.35rem;
   color: #203326;
+  font-size: 1.02rem;
 }
 
 .benefit-list small {
@@ -932,13 +1342,26 @@ section {
 }
 
 .feature-card p {
-  min-height: 3.2em;
   color: #a8b9a8;
   font-size: 0.9rem;
   line-height: 1.6;
 }
 
-.feature-card button,
+/* Um único convite ao fim da grade, no lugar de um link por cartão. */
+.features-acao {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.1rem;
+  margin-top: 2.6rem;
+  text-align: center;
+}
+
+.features-acao p {
+  color: #a8b9a8;
+  font-size: 0.92rem;
+}
+
 .crop-study-link {
   display: inline-flex;
   align-items: center;
@@ -955,7 +1378,6 @@ section {
   transition: color 0.2s ease;
 }
 
-.feature-card button:hover,
 .crop-study-link:hover {
   color: var(--green-neon);
 }
@@ -1184,7 +1606,337 @@ section {
   color: var(--green-neon);
 }
 
+/* ──── SENSOR ──── */
+/* Fundo escuro com a malha da cena; as quatro etapas ficam ligadas por um trilho com água correndo. */
+.sensor {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 50% 38%, rgba(0, 180, 255, 0.14), transparent 55%),
+    linear-gradient(rgba(127, 255, 106, 0.05) 1px, transparent 1px) 50% 0 / 44px 44px,
+    linear-gradient(90deg, rgba(127, 255, 106, 0.05) 1px, transparent 1px) 50% 0 / 44px 44px,
+    #07130b;
+}
+
+.fluxo {
+  position: relative;
+  max-width: 1160px;
+  margin: 3.5rem auto 0;
+}
+
+/* Trilho na altura do centro dos ícones (36px), entre o primeiro e o último. */
+.fluxo-trilho {
+  position: absolute;
+  top: 35px;
+  left: 12.5%;
+  right: 12.5%;
+  height: 3px;
+  border-radius: 3px;
+  background: rgba(56, 214, 255, 0.18);
+  overflow: hidden;
+}
+
+.fluxo-trilho::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(90deg, #38d6ff 0 14px, transparent 14px 64px);
+  box-shadow: 0 0 12px rgba(0, 180, 255, 0.8);
+  animation: fluxoAnda 1.4s linear infinite;
+}
+
+.fluxo-lista {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1.25rem;
+  list-style: none;
+}
+
+.fluxo-etapa {
+  --tom: var(--green-neon);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 0 0.5rem;
+}
+
+.fluxo-etapa:nth-child(even) {
+  --tom: #38d6ff;
+}
+
+.fluxo-icone {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 1.5px solid var(--tom);
+  background: radial-gradient(circle, color-mix(in srgb, var(--tom) 22%, #06120a), #06120a 72%);
+  color: var(--tom);
+  box-shadow: 0 0 0 6px rgba(7, 19, 11, 1), 0 0 28px -2px var(--tom);
+  transition: transform 0.35s var(--ease-out), box-shadow 0.35s ease;
+}
+
+.fluxo-etapa:hover .fluxo-icone {
+  transform: translateY(-4px) scale(1.05);
+  box-shadow: 0 0 0 6px rgba(7, 19, 11, 1), 0 0 40px 2px var(--tom);
+}
+
+.fluxo-numero {
+  margin-top: 1.2rem;
+  font-family: 'Syne', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  color: var(--tom);
+}
+
+.fluxo-etapa h3 {
+  margin: 0.35rem 0 0.6rem;
+  font-family: 'Syne', sans-serif;
+  font-size: 1.15rem;
+  color: #ffffff;
+}
+
+.fluxo-etapa p {
+  max-width: 250px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.sensor-fatos {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.7rem;
+  max-width: 900px;
+  margin: 3rem auto 0;
+  list-style: none;
+}
+
+.sensor-fatos li {
+  padding: 0.5rem 1rem;
+  border: 1px solid rgba(56, 214, 255, 0.35);
+  border-radius: 999px;
+  background: rgba(0, 180, 255, 0.08);
+  color: #c9f1ff;
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.sensor-nota {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.9rem;
+  max-width: 820px;
+  margin: 1.6rem auto 0;
+  padding: 1.1rem 1.3rem;
+  border: 1px solid rgba(127, 255, 106, 0.28);
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(127, 255, 106, 0.08), rgba(0, 180, 255, 0.06));
+}
+
+.sensor-nota-icone {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  background: rgba(127, 255, 106, 0.14);
+  color: var(--green-neon);
+}
+
+.sensor-nota p {
+  color: #c4d6c5;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.sensor-nota strong {
+  color: #ffffff;
+}
+
+/* ──── FAQ ──── */
+.faq {
+  display: grid;
+  grid-template-columns: minmax(0, 420px) minmax(0, 700px);
+  justify-content: center;
+  gap: clamp(2.5rem, 6vw, 5rem);
+  align-items: start;
+  background: linear-gradient(135deg, #f7f4ea 0%, #eef7ec 100%);
+  color: var(--dark);
+}
+
+.faq-intro {
+  position: sticky;
+  top: calc(var(--nav-offset) + 1rem);
+}
+
+.faq .section-tag {
+  color: var(--green);
+}
+
+.faq .section-title {
+  color: var(--dark);
+  font-size: clamp(2rem, 3.2vw, 2.9rem);
+}
+
+.faq .section-body {
+  color: #555;
+}
+
+.faq-lista {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.faq-item {
+  border: 1px solid rgba(32, 51, 38, 0.1);
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 14px 30px -24px rgba(20, 40, 26, 0.4);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.faq-item[open] {
+  border-color: rgba(57, 131, 77, 0.4);
+  box-shadow: 0 20px 40px -24px rgba(20, 60, 30, 0.45);
+}
+
+.faq-item summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.15rem 1.3rem;
+  color: #203326;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.faq-item summary::-webkit-details-marker {
+  display: none;
+}
+
+/* Sinal de + que vira − ao abrir. */
+.faq-sinal {
+  position: relative;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(127, 255, 106, 0.25), rgba(0, 180, 255, 0.2));
+  transition: background 0.3s ease, transform 0.35s var(--ease-out);
+}
+
+.faq-sinal::before,
+.faq-sinal::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 12px;
+  height: 2px;
+  margin: -1px 0 0 -6px;
+  border-radius: 2px;
+  background: #1f7a38;
+  transition: transform 0.35s var(--ease-out), background-color 0.3s ease;
+}
+
+.faq-sinal::after {
+  transform: rotate(90deg);
+}
+
+.faq-item[open] .faq-sinal {
+  background: linear-gradient(135deg, #3fd45a, #00a6e8);
+  transform: rotate(180deg);
+}
+
+.faq-item[open] .faq-sinal::before,
+.faq-item[open] .faq-sinal::after {
+  background: #ffffff;
+}
+
+.faq-item[open] .faq-sinal::after {
+  transform: rotate(0deg);
+}
+
+.faq-item p {
+  padding: 0 1.3rem 1.2rem;
+  color: #4f5e51;
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+
+/* ──── VOLTAR AO TOPO ──── */
+.voltar-topo {
+  position: fixed;
+  right: clamp(1rem, 2.5vw, 2rem);
+  bottom: clamp(1rem, 2.5vw, 2rem);
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border: 1px solid rgba(127, 255, 106, 0.5);
+  border-radius: 50%;
+  background: rgba(10, 26, 15, 0.85);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  color: var(--green-neon);
+  box-shadow: 0 12px 26px -12px rgba(0, 0, 0, 0.6), 0 0 18px -6px rgba(127, 255, 106, 0.7);
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(12px);
+  pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.3s var(--ease-out), background-color 0.2s ease, color 0.2s ease;
+}
+
+.landing--topo .voltar-topo {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+.voltar-topo:hover {
+  background: var(--green-neon);
+  color: var(--dark);
+}
+
 /* ──── ANIMATIONS ──── */
+@keyframes fioPulso {
+  from {
+    top: 3.2rem;
+    opacity: 0;
+  }
+  15%,
+  85% {
+    opacity: 1;
+  }
+  to {
+    top: calc(100% - 3.2rem - 26px);
+    opacity: 0;
+  }
+}
+
+@keyframes fluxoAnda {
+  to {
+    background-position: 64px 0;
+  }
+}
+
+@keyframes fluxoDesce {
+  to {
+    background-position: 0 64px;
+  }
+}
+
 @keyframes rainFall {
   from {
     transform: translate3d(0, 0, 0);
@@ -1194,25 +1946,76 @@ section {
   }
 }
 
-@keyframes sprinklerSweep {
+@keyframes irrGiro {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes irrOnda {
   from {
-    transform: rotate(-16deg);
+    transform: scale(0.2);
+    opacity: 0.9;
   }
   to {
-    transform: rotate(22deg);
+    transform: scale(1);
+    opacity: 0;
   }
 }
 
-@keyframes jetFlow {
-  to {
-    stroke-dashoffset: -13;
+/* Gota do jato principal: sai do bocal, voa até a ponta diminuindo e some. */
+@keyframes irrVoo {
+  0% {
+    transform: translateX(0) scale(1);
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateX(104px) scale(0.5);
+    opacity: 0;
   }
 }
 
-@keyframes mistPulse {
+@keyframes irrCintila {
+  from {
+    opacity: 0.2;
+    transform: scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1.25);
+  }
+}
+
+@keyframes linhaBrilho {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(640%);
+  }
+}
+
+@keyframes pontoOnda {
+  from {
+    transform: scale(0.6);
+    opacity: 0.9;
+  }
+  to {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+}
+
+@keyframes irrPulso {
   0%,
   100% {
-    opacity: 0.55;
+    opacity: 0.6;
   }
   50% {
     opacity: 1;
@@ -1303,7 +2106,6 @@ section {
   .hero-glow,
   .hero-drops,
   .hero-rain-near,
-  .hero-sprinkler,
   .hero-content,
   .parallax-mid-bg,
   .parallax-mid-content,
@@ -1317,15 +2119,24 @@ section {
   }
 
   .rain-drop,
-  .sprinkler-jet,
-  .sprinkler-droplet,
-  .sprinkler-splash,
-  .hero-scroll span {
+  .hero-scroll span,
+  .about-visual::after,
+  .fluxo-trilho::after {
     display: none;
   }
 
-  .sprinkler-head {
-    animation: none;
+  /* Sem movimento: o hero volta a ser uma seção comum, sem a cena conduzida pela rolagem. */
+  .hero-trilho {
+    height: auto;
+  }
+
+  .hero {
+    position: relative;
+    height: auto;
+  }
+
+  .cena {
+    display: none;
   }
 }
 
@@ -1411,6 +2222,55 @@ section {
     flex-wrap: wrap;
     justify-content: center;
   }
+
+  /* Sensor: as etapas descem em coluna e o trilho passa a correr na vertical, à esquerda. */
+  .fluxo-lista {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+
+  .fluxo-trilho {
+    top: 36px;
+    bottom: 36px;
+    left: 35px;
+    right: auto;
+    width: 3px;
+    height: auto;
+  }
+
+  .fluxo-trilho::after {
+    background: repeating-linear-gradient(180deg, #38d6ff 0 14px, transparent 14px 64px);
+    animation-name: fluxoDesce;
+  }
+
+  .fluxo-etapa {
+    display: grid;
+    grid-template-columns: 72px 1fr;
+    column-gap: 1.2rem;
+    align-items: start;
+    text-align: left;
+    padding: 0;
+  }
+
+  .fluxo-icone {
+    grid-row: 1 / 4;
+  }
+
+  .fluxo-numero {
+    margin-top: 0.3rem;
+  }
+
+  .fluxo-etapa p {
+    max-width: none;
+  }
+
+  .faq {
+    grid-template-columns: 1fr;
+  }
+
+  .faq-intro {
+    position: static;
+  }
 }
 
 @media (max-width: 520px) {
@@ -1476,11 +2336,10 @@ section {
     display: none;
   }
 
-  /* No celular o texto ocupa a largura toda: irrigador menor e discreto, atrás dos botões. */
-  .hero-sprinkler {
-    --sprinkler-w: 62vw;
-    right: -28px;
-    opacity: 0.4;
+  /* No celular a cena é mais curta. */
+  .hero-trilho {
+    height: 300vh;
+    height: 300svh;
   }
 
   .about-visual {
@@ -1530,8 +2389,79 @@ section {
   }
 }
 
+/* Tablet e celular: não há largura para a órbita lateral. A órbita vira um círculo em volta do
+   irrigador e as informações formam duas colunas, duas fileiras acima e uma abaixo dele. */
+@media (max-width: 900px) {
+  .cena {
+    --rx: min(40vw, 230px);
+    --ry: var(--rx);
+  }
+
+  .cena-centro {
+    width: min(58vw, 260px);
+  }
+
+  .cena-info,
+  .cena-info[class*="cena-info--"] {
+    translate: none;
+    width: auto;
+    max-width: none;
+    gap: 0.5rem;
+    padding: 0.55rem 0.7rem 0.55rem 0.55rem;
+    border-radius: 13px;
+    transform: translateY(calc((1 - var(--k)) * 18px)) scale(calc(0.94 + var(--k) * 0.06));
+  }
+
+  .cena-info-ponto {
+    display: none;
+  }
+
+  .cena-info-icone {
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+  }
+
+  .cena-info-texto strong {
+    font-size: 0.76rem;
+  }
+
+  .cena-info-texto small {
+    font-size: 0.66rem;
+  }
+
+  .cena-info.cena-info--esq-cima { top: 15%; left: 4%; right: 51%; }
+  .cena-info.cena-info--dir-cima { top: 15%; left: 51%; right: 4%; }
+  .cena-info.cena-info--esq-meio { top: 24%; left: 4%; right: 51%; }
+  .cena-info.cena-info--dir-meio { top: 24%; left: 51%; right: 4%; }
+  .cena-info.cena-info--esq-baixo { top: 71%; left: 4%; right: 51%; }
+  .cena-info.cena-info--dir-baixo { top: 71%; left: 51%; right: 4%; }
+
+  .cena-legenda {
+    bottom: 5%;
+  }
+
+  .cena-legenda p {
+    font-size: 0.88rem;
+  }
+}
+
 @media (max-height: 640px) {
   .hero-scroll {
+    display: none;
+  }
+
+  /* Tela baixa: o texto do hero pode não caber fixo, então ele rola normalmente, sem a cena. */
+  .hero-trilho {
+    height: auto;
+  }
+
+  .hero {
+    position: relative;
+    height: auto;
+  }
+
+  .cena {
     display: none;
   }
 }
