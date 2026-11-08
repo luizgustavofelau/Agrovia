@@ -152,18 +152,22 @@ void enviarLeituras() {
 }
 
 void setup() {
+  // Primeiro de tudo: válvula fechada. O nível "desligado" é gravado ANTES de o pino virar
+  // saída; senão, em relés que ligam com LOW, o pino nasce em LOW e o relé estala por um instante.
+  digitalWrite(PINO_RELE, RELE_ATIVO_EM_LOW ? HIGH : LOW);
   pinMode(PINO_RELE, OUTPUT);
-  acionarRele(false);  // primeiro de tudo: válvula fechada
+  acionarRele(false);
   Serial.begin(115200);
   analogReadResolution(12);
   analogSetPinAttenuation(PINO_SENSOR, ADC_11db);
 #if ESP_ARDUINO_VERSION_MAJOR >= 3
   esp_task_wdt_config_t wdt = { .timeout_ms = 30000, .idle_core_mask = 0, .trigger_panic = true };
-  esp_task_wdt_reconfigure(&wdt);
+  // No núcleo 3.x o watchdog normalmente já vem iniciado (reconfigure); se não vier, inicia aqui.
+  if (esp_task_wdt_reconfigure(&wdt) != ESP_OK) esp_task_wdt_init(&wdt);
 #else
   esp_task_wdt_init(30, true);
 #endif
-  esp_task_wdt_add(NULL);
+  if (esp_task_wdt_add(NULL) != ESP_OK) Serial.println("[AGROVIA] Aviso: watchdog nao ativado.");
   WiFi.mode(WIFI_STA);
   // O MAC é o que se cadastra no painel (Sensores → Adicionar dispositivo).
   Serial.printf("\n[AGROVIA] MAC deste ESP32: %s\n", WiFi.macAddress().c_str());
