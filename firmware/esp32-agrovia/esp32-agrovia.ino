@@ -29,6 +29,8 @@ int bufferTotal = 0;
 unsigned long proximaLeituraMs = 0;
 unsigned long valvulaFechaEmMs = 0;
 bool valvulaAberta = false;
+// Valor bruto do ADC da última leitura: aparece no Monitor Serial para calibrar LEITURA_SECO/MOLHADO.
+float ultimoBruto = 0;
 
 void acionarRele(bool ligar) {
   const bool nivel = RELE_ATIVO_EM_LOW ? !ligar : ligar;
@@ -46,6 +48,7 @@ float lerUmidade() {
   long soma = 0;
   for (int i = 0; i < 16; i++) { soma += analogRead(PINO_SENSOR); delay(5); }
   const float bruto = soma / 16.0f;
+  ultimoBruto = bruto;
   float pct = (LEITURA_SECO - bruto) * 100.0f / (LEITURA_SECO - LEITURA_MOLHADO);
   if (pct < 0) pct = 0;
   if (pct > 100) pct = 100;
@@ -57,7 +60,9 @@ bool conectarWifi() {
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASS);
   for (int i = 0; i < 40 && WiFi.status() != WL_CONNECTED; i++) { delay(250); esp_task_wdt_reset(); }
-  return WiFi.status() == WL_CONNECTED;
+  if (WiFi.status() != WL_CONNECTED) return false;
+  Serial.printf("[WIFI] Conectado a \"%s\" | IP %s\n", WIFI_SSID, WiFi.localIP().toString().c_str());
+  return true;
 }
 
 // Chamada HTTPS à API com a chave do dispositivo. Retorna o código HTTP (ou < 0 em falha).
@@ -70,12 +75,16 @@ int chamarApi(const char* metodo, const String& caminho, const String& corpo, St
 #endif
   HTTPClient http;
   http.setTimeout(15000);
+  // Handshake TLS + resposta podem levar vários segundos (o Render "acorda" em até ~1 min):
+  // avisa o watchdog antes e depois para o aparelho não reiniciar no meio da chamada.
+  esp_task_wdt_reset();
   if (!http.begin(cliente, String(API_ORIGEM) + caminho)) return -1;
   http.addHeader("Content-Type", "application/json");
   http.addHeader("X-Device-Key", DEVICE_KEY);
   const int codigo = http.sendRequest(metodo, corpo);
   resposta = codigo > 0 ? http.getString() : "";
   http.end();
+  esp_task_wdt_reset();
   return codigo;
 }
 
@@ -131,12 +140,14 @@ void enviarLeituras() {
   serializeJson(doc, corpo);
   const int codigo = chamarApi("POST", "/api/iot/leituras", corpo, resposta);
   if (codigo == 201) {
+    Serial.printf("[API] %d leitura(s) enviada(s) com sucesso\n", bufferTotal);
     bufferTotal = 0;
     JsonDocument r;
     if (!deserializeJson(r, resposta)) executarComandos(r["comandos"].as<JsonArray>());
   } else {
     Serial.printf("[API] Envio falhou (%d); %d leitura(s) guardada(s)\n", codigo, bufferTotal);
-    if (codigo == 401) Serial.println("[API] Chave recusada: gere uma nova chave no painel.");
+    if (codigo == 401) Serial.println("[API] Chave recusada: confira DEVICE_KEY ou gere uma nova chave no painel.");
+    else if (codigo < 0) Serial.println("[API] Sem resposta: confira API_ORIGEM, o certificado (ROOT_CA) e a internet. O Render pode levar ~1 min para acordar.");
   }
 }
 
@@ -153,7 +164,11 @@ void setup() {
   esp_task_wdt_init(30, true);
 #endif
   esp_task_wdt_add(NULL);
-  conectarWifi();
+  WiFi.mode(WIFI_STA);
+  // O MAC é o que se cadastra no painel (Sensores → Adicionar dispositivo).
+  Serial.printf("\n[AGROVIA] MAC deste ESP32: %s\n", WiFi.macAddress().c_str());
+  Serial.printf("[AGROVIA] API: %s\n", API_ORIGEM);
+  if (!conectarWifi()) Serial.println("[WIFI] Falha ao conectar; nova tentativa a cada leitura.");
   configTime(0, 0, "pool.ntp.org", "time.google.com");
 }
 
@@ -166,7 +181,7 @@ void loop() {
   if ((long)(millis() - proximaLeituraMs) >= 0) {
     proximaLeituraMs = millis() + INTERVALO_LEITURA_S * 1000UL;
     const float umidade = lerUmidade();
-    Serial.printf("[SENSOR] Umidade %.1f %%\n", umidade);
+    Serial.printf("[SENSOR] Umidade %.1f %% (valor bruto %.0f)\n", umidade, ultimoBruto);
     guardarLeitura(umidade);
     if (conectarWifi()) enviarLeituras();
     else Serial.println("[WIFI] Sem conexao; leitura guardada.");
