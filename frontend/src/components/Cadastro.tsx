@@ -156,7 +156,7 @@ const Cadastro: React.FC = () => {
       </p>
 
       <footer className="login-footer">
-        © 2026 AgroVia — Tecnologia para o Campo
+        © 2026 Agrovia · TCC UNASP Engenheiro Coelho
       </footer>
     </AuthLayout>
   );

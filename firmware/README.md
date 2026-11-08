@@ -86,4 +86,4 @@ Erros: `401` chave inválida, `400` dados inválidos (umidade fora de 0–100, h
 - **Hidrômetro ou sensor de vazão:** para confirmar que a água realmente passou, não apenas que o relé foi acionado.
 - **Alertas** (sensor sem comunicação, umidade fora da faixa, comando com falha) por e-mail, que depende do SMTP.
 - **Atualização de firmware pela rede (OTA)**, para não precisar regravar via USB no campo.
-- Gráfico histórico completo no painel: o cartão do dispositivo já mostra as últimas 24 leituras; o gráfico principal do Painel ainda é ilustrativo.
+- O gráfico do Painel já mostra as leituras reais (até 500 por dispositivo, com filtros de 1 h, 6 h e recentes); um histórico longo por semanas/meses ainda não existe.
